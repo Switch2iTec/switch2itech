@@ -1,16 +1,25 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider } from "./components/Layout/ThemeContext.jsx";
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import axios from "axios";
 
-createRoot(document.getElementById('root')).render(
+// Context Imports
+import { ThemeProvider } from "./components/Layout/ThemeContext.jsx";
+import ContextProvider from "./context/ContextProvider.jsx"
+
+import "./index.css";
+import App from "./App.jsx";
+
+axios.defaults.withCredentials = true;
+
+createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <ThemeProvider> 
-        <App />
-      </ThemeProvider>
+      <ContextProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </ContextProvider>
     </BrowserRouter>
   </StrictMode>
-)
+);

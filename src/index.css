@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
-
+@layer components {
+  .signup-input {
+    @apply w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 
+    dark:border-zinc-800 dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 
+    focus:ring-indigo-500/20 focus:border-indigo-500 transition-all;
+  }
+}
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

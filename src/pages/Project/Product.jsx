@@ -1,98 +1,64 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Search, Plus, Code, ExternalLink, Loader2 } from "lucide-react";
+import { Search, Plus, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import Main from "./Main";
 
-const DUMMY_DATA = [
-  {
-    _id: "1",
-    name: "Nexus Cloud Infrastructure",
-    category: "DevOps",
-    desc: "A highly scalable cloud management dashboard designed for enterprise-level automation.",
-    techStack: ["React", "Node.js", "AWS", "Docker"],
-    clients: "Global Tech Corp",
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000",
-    thumbnail: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000",
-    progress: 95,
-    deadline: "Dec 2025",
-    status: "Active"
-  },
-  {
-    _id: "2",
-    name: "FinFlow Mobile Wallet",
-    category: "FinTech",
-    desc: "Next-generation digital wallet with biometric security and cross-border integration.",
-    techStack: ["React Native", "Firebase", "Stripe API"],
-    clients: "Silverline Banking",
-    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1000",
-    thumbnail: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1000",
-    progress: 88,
-    deadline: "Feb 2026",
-    status: "Under Review"
-  },
-  {
-    _id: "3",
-    name: "Aether AI Engine",
-    category: "AI",
-    desc: "NLP engine capable of analyzing high-volume datasets for sentiment forecasting.",
-    techStack: ["Python", "TensorFlow", "FastAPI"],
-    clients: "DataSynthetix",
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=1000",
-    thumbnail: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=1000",
-    progress: 100,
-    deadline: "Completed",
-    status: "Deployed"
-  }
-];
-
 const ProductDashboard = () => {
-  const [products, setProducts] = useState([]);
+  const [projects, setProjects] = useState([]); // Sahi state name
   const [loading, setLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [error, setError] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const API_URL = "http://localhost:5000/api/products";
+  const API_URL = "http://localhost:5000/api/projects";
 
+  // --- FETCH DATA SECTION ---
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProjects = async () => {
       try {
-        const response = await axios.get(API_URL);
-        if (response.data && response.data.length > 0) {
-          setProducts(response.data);
+        const response = await axios.get(API_URL, {
+          withCredentials: true,
+        });
+
+        // Backend response structure: { status: "success", data: [...] }
+        if (response.data && response.data.data) {
+          setProjects(response.data.data); // Sahi setter call
         } else {
-          setProducts(DUMMY_DATA);
+          setProjects(response.data); // Fallback
         }
       } catch (error) {
-        setProducts(DUMMY_DATA);
+        console.error("Error loading projects:", error);
+        setError("Projects load nahi ho sakay. Server check karein.");
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchProjects();
   }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this asset?")) {
+    if (
+      window.confirm("Kya aap waqai is project ko delete karna chahte hain?")
+    ) {
       try {
-        if (id.length > 5) { 
-          await axios.delete(`${API_URL}/${id}`);
-        }
-        setProducts(products.filter((p) => p._id !== id));
-        setSelectedProduct(null);
+        await axios.delete(`${API_URL}/${id}`, { withCredentials: true });
+        setProjects(projects.filter((p) => p._id !== id));
+        setSelectedProject(null);
       } catch (error) {
-        alert("Delete failed.");
+        alert("Delete fail ho gaya.");
       }
     }
   };
 
-  const filteredProducts = products.filter(
+  // Filter logic
+  const filteredProjects = projects.filter(
     (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
+      p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.status?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading)
@@ -102,12 +68,23 @@ const ProductDashboard = () => {
       </div>
     );
 
-  if (selectedProduct) {
+  if (error)
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background text-destructive p-4 text-center">
+        <AlertCircle size={40} className="mb-4" />
+        <p className="font-bold">{error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Dobara Koshish Karein
+        </Button>
+      </div>
+    );
+
+  if (selectedProject) {
     return (
       <Main
-        product={selectedProduct}
-        onBack={() => setSelectedProduct(null)}
-        onDelete={() => handleDelete(selectedProduct._id)}
+        product={selectedProject}
+        onBack={() => setSelectedProject(null)}
+        onDelete={() => handleDelete(selectedProject._id)}
       />
     );
   }
@@ -115,97 +92,92 @@ const ProductDashboard = () => {
   return (
     <div className="min-h-screen bg-background p-6 md:px-12 md:py-8 font-sans text-foreground">
       <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Project Management
+            </h1>
             <p className="text-muted-foreground text-sm font-medium">
-              {filteredProducts.length} Active Repositories
+              {filteredProjects.length} Active Projects Milay
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={16}
+              />
               <Input
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 py-2 bg-card border-border rounded-lg w-48 md:w-64 h-10"
+                className="pl-9 w-48 md:w-64 h-10"
               />
             </div>
-            <Button className="h-10 px-4 rounded-lg font-bold">
+            <Button className="h-10 px-4 font-bold">
               <Plus size={16} className="mr-2" strokeWidth={3} />
-              New
+              New Project
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <Card
-              key={product._id}
-              onClick={() => setSelectedProduct(product)}
-              className="group bg-card border-border rounded-2xl overflow-hidden transition-all hover:shadow-md cursor-pointer"
-            >
-              <div className="relative h-32 w-full overflow-hidden bg-muted">
-                <img
-                  src={product.thumbnail || product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-card/90 backdrop-blur px-2 py-0.5 rounded-md text-[9px] font-bold uppercase text-primary border border-white/10">
-                    {product.category}
-                  </Badge>
-                </div>
-              </div>
-
-              <CardContent className="p-4">
-                <h3 className="text-lg font-bold text-foreground mb-1 truncate">
-                  {product.name}
-                </h3>
-                <p className="text-muted-foreground text-xs line-clamp-1 mb-3">
-                  {product.desc}
-                </p>
-
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {product.techStack?.slice(0, 3).map((tech, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      className="px-2 py-0 bg-muted/30 border-border rounded-md text-[9px] font-medium text-muted-foreground"
-                    >
-                      {tech}
+        {/* Projects Grid */}
+        {filteredProjects.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed rounded-2xl">
+            <p className="text-muted-foreground">Koi project nahi mila.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <Card
+                key={project._id}
+                onClick={() => setSelectedProject(project)}
+                className="group border-border rounded-2xl overflow-hidden transition-all hover:shadow-lg cursor-pointer bg-card"
+              >
+                <div className="relative h-40 w-full overflow-hidden bg-muted">
+                  <img
+                    src={
+                      project.coverImage ||
+                      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000"
+                    }
+                    alt={project.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-primary text-primary-foreground uppercase text-[10px]">
+                      {project.status}
                     </Badge>
-                  ))}
-                </div>
-
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Progress</span>
-                    <span className="text-[10px] font-bold text-primary">{product.progress || 0}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
-                    <div 
-                      className="bg-primary h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${product.progress || 0}%` }}
-                    />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase">Stakeholder</span>
-                    <span className="text-xs font-semibold text-foreground/80">{product.clients || "Internal"}</span>
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-bold truncate mb-1">
+                    {project.title}
+                  </h3>
+                  <p className="text-muted-foreground text-xs line-clamp-2 mb-4 h-8">
+                    {project.description}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-3 border-t">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                        Priority
+                      </span>
+                      <span className="text-xs font-semibold capitalize">
+                        {project.priority}
+                      </span>
+                    </div>
+                    <div className="h-8 w-8 bg-muted rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <ExternalLink size={14} />
+                    </div>
                   </div>
-                  <div className="h-8 w-8 bg-muted rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <ExternalLink size={14} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ const Main = () => {
   const areaPoints = `${smoothPath} L 100,100 L 0,100 Z`;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[450px]">
+    <div className=" flex flex-col lg:flex-row gap-6 items-stretch min-h-[450px] ">
       {/* Chart Card - Multi-theme surface */}
       <Card className="lg:w-[70%] rounded-[2rem] border border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl shadow-blue-500/5">
         <CardHeader className="flex flex-row items-center justify-between px-8 pt-8 pb-0">

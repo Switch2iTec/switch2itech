@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ScrollArea } from '../ui/scroll-area'
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'
-import { Button } from '../ui/button'
+import React, { useState, useEffect } from "react"; // Added useEffect
+import { NavLink, useNavigate } from "react-router-dom";
+import axios from "axios"; // Added axios
+import { motion, AnimatePresence } from "framer-motion";
+import { ScrollArea } from "../ui/scroll-area";
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
+import { Button } from "../ui/button";
 import {
   LayoutDashboard,
   Briefcase,
@@ -15,39 +16,74 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-} from 'lucide-react'
+  Loader2, // Added Loader
+} from "lucide-react";
 
 const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const navigate = useNavigate()
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [user, setUser] = useState(null); // User state
+  const [loading, setLoading] = useState(true); // Loading state
+  const navigate = useNavigate();
+
+  // 1. Fetch Profile Data from Backend
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/auth/me", {
+          withCredentials: true, // Crucial for sending JWT cookies
+        });
+        if (response.data.status === "success") {
+          setUser(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        // Optional: navigate('/login') if unauthorized
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Helper: Get Initials for Fallback
+  const getInitials = (name) => {
+    if (!name) return "??";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
 
   const mainMenu = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Briefcase, label: 'Projects', path: '/projects' },
-    { icon: Users, label: 'Clients', path: '/clients' },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-    { icon: MessageSquare, label: 'Testimonials', path: '/testimonials' },
-    { icon: Package, label: 'Products', path: '/products' },
-  ]
+    { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: Briefcase, label: "Projects", path: "/projects" },
+    { icon: Users, label: "Clients", path: "/clients" },
+    { icon: BarChart3, label: "Analytics", path: "/analytics" },
+    { icon: MessageSquare, label: "Testimonials", path: "/testimonials" },
+    { icon: Package, label: "Products", path: "/products" },
+  ];
 
-  const systemMenu = [
-    { icon: LifeBuoy, label: 'Support', path: '/support' },
-  ]
+  const systemMenu = [{ icon: LifeBuoy, label: "Support", path: "/support" }];
 
   const NavItem = ({ item }) => (
     <NavLink
       to={item.path}
-      end={item.path === '/'}
+      end={item.path === "/"}
       className={({ isActive }) =>
         `relative w-full flex items-center px-3.5 py-2.5 rounded-xl transition-all duration-300 group ${
-          isActive ? 'text-indigo-500 bg-indigo-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-        } ${isCollapsed ? 'justify-center' : 'space-x-3'}`
+          isActive
+            ? "text-indigo-500 bg-indigo-500/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        } ${isCollapsed ? "justify-center" : "space-x-3"}`
       }
     >
       {({ isActive }) => (
         <>
-          <item.icon className={`h-5 w-5 shrink-0 transition-colors ${isActive ? 'text-indigo-500' : 'group-hover:text-foreground'}`} />
-          
+          <item.icon
+            className={`h-5 w-5 shrink-0 transition-colors ${isActive ? "text-indigo-500" : "group-hover:text-foreground"}`}
+          />
+
           <AnimatePresence mode="wait">
             {!isCollapsed && (
               <motion.span
@@ -70,25 +106,34 @@ const Sidebar = () => {
         </>
       )}
     </NavLink>
-  )
+  );
 
   return (
-    <div 
+    <div
       className={`h-screen flex flex-col border-r bg-card border-border shrink-0 transition-all duration-300 ease-in-out z-50 ${
-        isCollapsed ? 'w-20' : 'w-72'
+        isCollapsed ? "w-20" : "w-72"
       }`}
     >
-      <div className={`h-20 flex items-center border-b border-border transition-all duration-300 ${isCollapsed ? 'px-1 justify-center' : 'px-6 justify-between'}`}>
+      {/* Header / Logo */}
+      <div
+        className={`h-20 flex items-center border-b border-border transition-all duration-300 ${isCollapsed ? "px-1 justify-center" : "px-6 justify-between"}`}
+      >
         <div className="flex items-center gap-2 overflow-hidden shrink-0">
-          <div className={`bg-indigo-500/10 rounded-xl flex items-center justify-center shrink-0 transition-all ${isCollapsed ? 'h-8 w-8' : 'h-9 w-9'}`}>
-            <img src="/Images/Logo.png" alt="Logo" className="h-5 w-5 object-contain" />
+          <div
+            className={`bg-indigo-500/10 rounded-xl flex items-center justify-center shrink-0 transition-all ${isCollapsed ? "h-8 w-8" : "h-9 w-9"}`}
+          >
+            <img
+              src="/Images/Logo.png"
+              alt="Logo"
+              className="h-5 w-5 object-contain"
+            />
           </div>
-          
+
           <AnimatePresence>
             {!isCollapsed && (
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
+                animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
                 className="text-lg font-extrabold tracking-tight text-foreground truncate whitespace-nowrap"
               >
@@ -102,12 +147,17 @@ const Sidebar = () => {
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg shrink-0 transition-all ${isCollapsed ? 'h-8 w-8' : 'h-9 w-9'}`}
+          className={`text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg shrink-0 transition-all ${isCollapsed ? "h-8 w-8" : "h-9 w-9"}`}
         >
-          {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={18} />}
+          {isCollapsed ? (
+            <PanelLeftOpen size={16} />
+          ) : (
+            <PanelLeftClose size={18} />
+          )}
         </Button>
       </div>
 
+      {/* Menu Area */}
       <ScrollArea className="flex-1 px-3 py-4">
         <div className="mb-6">
           {!isCollapsed && (
@@ -136,41 +186,59 @@ const Sidebar = () => {
         </div>
       </ScrollArea>
 
+      {/* Profile Section with Backend Data */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-1">
-          <NavLink
-  to="/admin-profile" // Matches the path added in App.jsx
-  className={({ isActive }) => 
-    `flex flex-1 items-center gap-3 p-2 rounded-2xl transition-all duration-300 overflow-hidden ${
-      isActive ? 'bg-indigo-500/10 border-indigo-500/20 border' : 'bg-secondary/30 hover:bg-secondary/50 border border-transparent'
-    } ${isCollapsed ? 'justify-center' : ''}`
-  }
->
-  <div className="relative shrink-0">
-    <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-      <AvatarImage src="https://i.pravatar.cc/150?u=devadmin" alt="Alex Rivera" />
-      <AvatarFallback className="bg-indigo-500 text-white text-xs">AR</AvatarFallback>
-    </Avatar>
-    <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
-  </div>
-  
-  {!isCollapsed && (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex-1 min-w-0"
-    >
-      <p className="text-sm font-bold text-foreground truncate">Alex Rivera</p>
-      <p className="text-[10px] font-black uppercase tracking-tighter text-indigo-500 truncate leading-none mt-0.5">
-        Senior Developer
-      </p>
-    </motion.div>
-  )}
-</NavLink>
-          
+          {loading ? (
+            <div
+              className={`flex flex-1 items-center gap-3 p-2 justify-center`}
+            >
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+            </div>
+          ) : (
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                `flex flex-1 items-center gap-3 p-2 rounded-2xl transition-all duration-300 overflow-hidden ${
+                  isActive
+                    ? "bg-indigo-500/10 border-indigo-500/20 border"
+                    : "bg-secondary/30 hover:bg-secondary/50 border border-transparent"
+                } ${isCollapsed ? "justify-center" : ""}`
+              }
+            >
+              <div className="relative shrink-0">
+                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                  <AvatarImage
+                    src={user?.profile || ""}
+                    alt={user?.name || "User"}
+                  />
+                  <AvatarFallback className="bg-indigo-500 text-white text-xs font-bold">
+                    {getInitials(user?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-background rounded-full" />
+              </div>
+
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="text-sm font-bold text-foreground truncate">
+                    {user?.name || "Unknown User"}
+                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-tighter text-indigo-500 truncate leading-none mt-0.5">
+                    {user?.role || "Guest"}
+                  </p>
+                </motion.div>
+              )}
+            </NavLink>
+          )}
+
           {!isCollapsed && (
-            <NavLink 
-              to="/login" 
+            <NavLink
+              to="/login"
               className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors shrink-0"
             >
               <LogOut size={16} />
@@ -179,7 +247,7 @@ const Sidebar = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
