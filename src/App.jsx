@@ -16,8 +16,10 @@ import Project from './pages/Project/Product';
 import Client from './pages/Client/Client';
 import Testimonials from './pages/Testimonials/Testimonials';
 import Addproject from './pages/Addproject/Addproject';
+import Addproduct from './pages/Addproduct/Addproduct';
 import Analytics from './pages/Analytics/Analytics';
 import Product from './pages/Product/Product';
+import ProjectDetail from './pages/Project/ProjectDetail';
 import Signin from './pages/Signin/Signin';
 import Signup from './pages/Signup/Signup';
 import NotFound from './pages/NotFound';
@@ -97,10 +99,36 @@ const App = () => {
             path="add-project"
             element={
               <RoleGuard
-                allowedRoles={["admin", "manager", "developer"]}
-                fallback={<Navigate to="/projects" />}
+                allowedRoles={["admin", "manager"]}
+                fallback={<Navigate to="/" />}
               >
                 <Addproject />
+              </RoleGuard>
+            }
+          />
+
+          {/* Project Detail — admin, manager, developer */}
+          <Route
+            path="projects/:id"
+            element={
+              <RoleGuard
+                allowedRoles={["admin", "manager", "developer"]}
+                fallback={<NotFound />}
+              >
+                <ProjectDetail />
+              </RoleGuard>
+            }
+          />
+
+          {/* Add Product — admin only */}
+          <Route
+            path="add-product"
+            element={
+              <RoleGuard
+                allowedRoles={["admin"]}
+                fallback={<Navigate to="/" />}
+              >
+                <Addproduct />
               </RoleGuard>
             }
           />

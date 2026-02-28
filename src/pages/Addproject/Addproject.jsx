@@ -1,346 +1,334 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import projectService from "../../api/projectService";
+import userService from "../../api/userService";
 import {
-  Send,
-  Layout,
-  Tag,
-  AlignLeft,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  Calendar,
-  DollarSign,
-  Flag,
-  Image as ImageIcon,
-  Video,
-  Plus,
-  Trash2,
-  HelpCircle,
+  Send, Layout, Tag, AlignLeft, Loader2, AlertCircle,
+  CheckCircle2, Calendar, DollarSign, Flag, Image as ImageIcon,
+  Video, Plus, Trash2, HelpCircle, Users, X
 } from "lucide-react";
-
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Badge } from "../../components/ui/badge";
+import { useAuth } from "../../context/ContextProvider";
 
-const Addproject = () => {
+const selectClass =
+  "w-full h-10 px-3 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-primary outline-none transition-all";
+
+const Addproject = ({ onSuccess }) => {
+  const { role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
+  const [allUsers, setAllUsers] = useState([]);
 
-  // State for text inputs
   const [project, setProject] = useState({
     title: "",
     description: "",
     status: "planning",
     priority: "medium",
-    budget: 0,
+    budget: "",
     currency: "USD",
     startDate: "",
     endDate: "",
     tags: "",
   });
 
-  // State for Files
   const [coverImage, setCoverImage] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
   const [demoVideo, setDemoVideo] = useState(null);
-
-  // State for FAQs (Array of objects)
   const [faqs, setFaqs] = useState([{ question: "", answer: "" }]);
 
-  const handleChange = (e) => {
+  // Team assignment (only for admin/manager)
+  const canAssignTeam = role === "admin" || role === "manager";
+  const [selectedManager, setSelectedManager] = useState("");
+  const [selectedDevs, setSelectedDevs] = useState([]);
+  const [selectedClients, setSelectedClients] = useState([]);
+
+  useEffect(() => {
+    if (canAssignTeam) {
+      userService.getUsers().then(res => setAllUsers(res.data?.data || [])).catch(() => { });
+    }
+  }, [canAssignTeam]);
+
+  const handleChange = (e) =>
     setProject({ ...project, [e.target.name]: e.target.value });
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setCoverImage(file);
+    if (file) setCoverPreview(URL.createObjectURL(file));
   };
 
-  // FAQ Handlers
   const handleFaqChange = (index, field, value) => {
-    const updatedFaqs = [...faqs];
-    updatedFaqs[index][field] = value;
-    setFaqs(updatedFaqs);
+    const updated = [...faqs];
+    updated[index][field] = value;
+    setFaqs(updated);
   };
-
   const addFaq = () => setFaqs([...faqs, { question: "", answer: "" }]);
-  const removeFaq = (index) => setFaqs(faqs.filter((_, i) => i !== index));
+  const removeFaq = (i) => setFaqs(faqs.filter((_, idx) => idx !== i));
+
+  const addDev = (e) => {
+    if (e.target.value && !selectedDevs.includes(e.target.value))
+      setSelectedDevs([...selectedDevs, e.target.value]);
+    e.target.value = "";
+  };
+  const removeDev = (id) => setSelectedDevs(selectedDevs.filter(x => x !== id));
+
+  const addClient = (e) => {
+    if (e.target.value && !selectedClients.includes(e.target.value))
+      setSelectedClients([...selectedClients, e.target.value]);
+    e.target.value = "";
+  };
+  const removeClient = (id) => setSelectedClients(selectedClients.filter(x => x !== id));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatus({ type: "", message: "" });
 
-    // Using FormData for File Uploads
     const formData = new FormData();
 
-    // Append standard fields
-    Object.keys(project).forEach((key) => {
+    // Core fields
+    Object.entries(project).forEach(([key, val]) => {
       if (key === "tags") {
-        if (project.tags) {
-          const tagArray = project.tags.split(",").map((tag) => tag.trim()).filter(Boolean);
-          tagArray.forEach((tag) => formData.append("tags[]", tag));
+        if (val) {
+          val.split(",").map(t => t.trim()).filter(Boolean).forEach(t => formData.append("tags[]", t));
         }
-      } else if (key === "startDate" || key === "endDate") {
-        if (project[key]) {
-          formData.append(key, new Date(project[key]).toISOString());
-        }
-      } else {
-        formData.append(key, project[key]);
+      } else if ((key === "startDate" || key === "endDate") && val) {
+        formData.append(key, new Date(val).toISOString());
+      } else if (key === "budget" && val !== "") {
+        formData.append(key, Number(val));
+      } else if (val !== "") {
+        formData.append(key, val);
       }
     });
 
-    // Append Files
+    // Files
     if (coverImage) formData.append("coverImage", coverImage);
     if (demoVideo) formData.append("demoVideo", demoVideo);
 
-    // Append FAQs as a stringified array (Backend needs to JSON.parse this)
+    // FAQs
     const validFaqs = faqs.filter(f => f.question && f.answer);
-    if (validFaqs.length > 0) {
-      formData.append("faqs", JSON.stringify(validFaqs));
+    if (validFaqs.length > 0) formData.append("faqs", JSON.stringify(validFaqs));
+
+    // Team (if admin/manager)
+    if (canAssignTeam) {
+      if (selectedManager) formData.append("manager", selectedManager);
+      selectedDevs.forEach(id => formData.append("teamMembers[]", id));
+      selectedClients.forEach(id => formData.append("clients[]", id));
     }
 
     try {
       const response = await projectService.createProject(formData);
-
-      if (response.data.status === "success") {
-        setStatus({
-          type: "success",
-          message: "Project created successfully!",
-        });
-        // Optional: Reset form here
+      if (response.data.status === "success" || response.data) {
+        setStatus({ type: "success", message: "Project created successfully! 🎉" });
+        // Reset
+        setProject({ title: "", description: "", status: "planning", priority: "medium", budget: "", currency: "USD", startDate: "", endDate: "", tags: "" });
+        setCoverImage(null); setCoverPreview(null); setDemoVideo(null);
+        setFaqs([{ question: "", answer: "" }]);
+        setSelectedManager(""); setSelectedDevs([]); setSelectedClients([]);
+        if (onSuccess) onSuccess();
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Something went wrong!";
-      setStatus({ type: "error", message: errorMsg });
+      setStatus({ type: "error", message: err.response?.data?.message || "Something went wrong!" });
     } finally {
       setLoading(false);
     }
   };
 
+  const managers = allUsers.filter(u => u.role === "admin" || u.role === "manager");
+  const developers = allUsers.filter(u => u.role === "developer");
+  const clients = allUsers.filter(u => u.role === "client");
+
   return (
     <div className="w-full max-w-3xl mx-auto bg-background p-2 transition-colors duration-300">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-foreground tracking-tight">
-          New Project Details
-        </h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Sahi data fill karein taake ERP system update ho sake.
-        </p>
+        <h2 className="text-3xl font-bold text-foreground tracking-tight">New Project</h2>
+        <p className="text-muted-foreground text-sm mt-1">Fill in the details below to provision a new project in the ERP system.</p>
       </div>
 
       {status.message && (
-        <div
-          className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${status.type === "success" ? "border-green-500/50 bg-green-500/10 text-green-600" : "border-red-500/50 bg-red-500/10 text-red-600"}`}
-        >
-          {status.type === "success" ? (
-            <CheckCircle2 size={20} />
-          ) : (
-            <AlertCircle size={20} />
-          )}
+        <div className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${status.type === "success" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-600" : "border-red-500/50 bg-red-500/10 text-red-600"}`}>
+          {status.type === "success" ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
           <p className="text-sm font-semibold">{status.message}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2 font-bold">
-            <Layout size={16} className="text-primary" /> Project Title
-          </Label>
-          <Input
-            name="title"
-            value={project.title}
-            onChange={handleChange}
-            placeholder="e.g. Website Redesign"
-            required
-          />
-        </div>
+        {/* ── Core Info ────────────────────────────────────────────────── */}
+        <fieldset className="space-y-5 p-6 rounded-2xl border border-border/60 bg-card/40">
+          <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Core Information</legend>
 
-        {/* Media Uploads (New) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <ImageIcon size={16} className="text-primary" /> Cover Image
-            </Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setCoverImage(e.target.files[0])}
-              className="cursor-pointer"
+            <Label className="flex items-center gap-2 font-bold"><Layout size={15} className="text-primary" /> Project Title *</Label>
+            <Input name="title" value={project.title} onChange={handleChange} placeholder="e.g. Website Redesign 2025" required className="rounded-xl" />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 font-bold"><AlignLeft size={15} className="text-primary" /> Description</Label>
+            <textarea
+              name="description"
+              value={project.description}
+              onChange={handleChange}
+              className="w-full min-h-[120px] p-3 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
+              placeholder="Detailed project scope and objectives..."
             />
           </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <Video size={16} className="text-primary" /> Demo Video
-            </Label>
-            <Input
-              type="file"
-              accept="video/*"
-              onChange={(e) => setDemoVideo(e.target.files[0])}
-              className="cursor-pointer"
-            />
-          </div>
-        </div>
 
-        {/* Status & Priority Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <Flag size={16} className="text-primary" /> Status
-            </Label>
-            <select
-              name="status"
-              value={project.status}
-              onChange={handleChange}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary outline-none"
-            >
-              <option value="planning">Planning</option>
-              <option value="active">Active</option>
-              <option value="on-hold">On Hold</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><Flag size={15} className="text-primary" /> Status</Label>
+              <select name="status" value={project.status} onChange={handleChange} className={selectClass}>
+                <option value="planning">Planning</option>
+                <option value="active">Active</option>
+                <option value="on-hold">On Hold</option>
+                <option value="in-review">In Review</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">Priority</Label>
+              <select name="priority" value={project.priority} onChange={handleChange} className={selectClass}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              Priority
-            </Label>
-            <select
-              name="priority"
-              value={project.priority}
-              onChange={handleChange}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary outline-none"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Budget & Tags Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <DollarSign size={16} className="text-primary" /> Budget
-            </Label>
-            <Input
-              type="number"
-              name="budget"
-              value={project.budget}
-              onChange={handleChange}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><DollarSign size={15} className="text-primary" /> Budget</Label>
+              <Input type="number" name="budget" value={project.budget} onChange={handleChange} placeholder="0" className="rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">Currency</Label>
+              <select name="currency" value={project.currency} onChange={handleChange} className={selectClass}>
+                {["USD", "EUR", "GBP", "PKR", "AED"].map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <Tag size={16} className="text-primary" /> Tags (comma separated)
-            </Label>
-            <Input
-              name="tags"
-              value={project.tags}
-              onChange={handleChange}
-              placeholder="React, Node, UI"
-            />
-          </div>
-        </div>
 
-        {/* Dates Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <Calendar size={16} className="text-primary" /> Start Date
-            </Label>
-            <Input
-              type="date"
-              name="startDate"
-              value={project.startDate}
-              onChange={handleChange}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><Calendar size={15} className="text-primary" /> Start Date</Label>
+              <Input type="date" name="startDate" value={project.startDate} onChange={handleChange} className="rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><Calendar size={15} className="text-primary" /> End Date</Label>
+              <Input type="date" name="endDate" value={project.endDate} onChange={handleChange} className="rounded-xl" />
+            </div>
           </div>
+
           <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-bold">
-              <Calendar size={16} className="text-primary" /> End Date
-            </Label>
-            <Input
-              type="date"
-              name="endDate"
-              value={project.endDate}
-              onChange={handleChange}
-            />
+            <Label className="flex items-center gap-2 font-bold"><Tag size={15} className="text-primary" /> Tags <span className="text-muted-foreground font-normal text-xs">(comma-separated)</span></Label>
+            <Input name="tags" value={project.tags} onChange={handleChange} placeholder="React, Node.js, UI Design" className="rounded-xl" />
           </div>
-        </div>
+        </fieldset>
 
-        {/* Description */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2 font-bold">
-            <AlignLeft size={16} className="text-primary" /> Project Description
-          </Label>
-          <textarea
-            name="description"
-            value={project.description}
-            onChange={handleChange}
-            className="w-full min-h-[120px] p-3 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
-            placeholder="Detailed scope..."
-            required
-          />
-        </div>
+        {/* ── Media Upload ──────────────────────────────────────────────── */}
+        <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
+          <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Media Assets</legend>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><ImageIcon size={15} className="text-primary" /> Cover Image</Label>
+              <Input type="file" accept="image/*" onChange={handleImageChange} className="cursor-pointer rounded-xl" />
+              {coverPreview && <img src={coverPreview} alt="preview" className="mt-2 rounded-xl h-28 w-full object-cover border border-border" />}
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><Video size={15} className="text-primary" /> Demo Video</Label>
+              <Input type="file" accept="video/*" onChange={e => setDemoVideo(e.target.files[0])} className="cursor-pointer rounded-xl" />
+              {demoVideo && <p className="text-xs text-muted-foreground mt-1">📹 {demoVideo.name}</p>}
+            </div>
+          </div>
+        </fieldset>
 
-        {/* FAQ Section (New) */}
-        <div className="space-y-4 border-t pt-6">
+        {/* ── Team Assignment (admin/manager only) ─────────────────────── */}
+        {canAssignTeam && (
+          <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
+            <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Team Assignment</legend>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-bold"><Users size={15} className="text-primary" /> Project Manager</Label>
+              <select className={selectClass} value={selectedManager} onChange={e => setSelectedManager(e.target.value)}>
+                <option value="">— Unassigned —</option>
+                {managers.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-bold">Developers</Label>
+              <select className={selectClass} onChange={addDev}>
+                <option value="">Add developer...</option>
+                {developers.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+              </select>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {selectedDevs.map(id => {
+                  const dev = developers.find(u => u._id === id);
+                  return dev ? (
+                    <Badge key={id} variant="secondary" className="cursor-pointer gap-1" onClick={() => removeDev(id)}>
+                      {dev.name} <X size={10} />
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-bold">Clients</Label>
+              <select className={selectClass} onChange={addClient}>
+                <option value="">Add client...</option>
+                {clients.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+              </select>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {selectedClients.map(id => {
+                  const cl = clients.find(u => u._id === id);
+                  return cl ? (
+                    <Badge key={id} className="bg-blue-100 text-blue-800 cursor-pointer gap-1" onClick={() => removeClient(id)}>
+                      {cl.name} <X size={10} />
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          </fieldset>
+        )}
+
+        {/* ── FAQs ─────────────────────────────────────────────────────── */}
+        <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2 font-bold text-lg">
-              <HelpCircle size={18} className="text-primary" /> Project FAQs
-            </Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addFaq}
-              className="flex items-center gap-1"
-            >
-              <Plus size={14} /> Add FAQ
+            <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              <HelpCircle size={14} className="inline mr-1 text-primary" /> Project FAQs
+            </legend>
+            <Button type="button" variant="outline" size="sm" onClick={addFaq} className="gap-1 rounded-xl h-8 text-xs">
+              <Plus size={13} /> Add FAQ
             </Button>
           </div>
-          {faqs.map((faq, index) => (
-            <div
-              key={index}
-              className="space-y-3 p-4 border rounded-xl bg-muted/20 relative"
-            >
+          {faqs.map((faq, i) => (
+            <div key={i} className="space-y-2 p-4 border rounded-xl bg-background/60 relative">
               <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
-                onClick={() => removeFaq(index)}
+                type="button" variant="ghost" size="icon"
+                className="absolute top-2 right-2 text-destructive hover:bg-destructive/10 h-7 w-7"
+                onClick={() => removeFaq(i)}
               >
-                <Trash2 size={16} />
+                <Trash2 size={14} />
               </Button>
-              <Input
-                placeholder="Question"
-                value={faq.question}
-                onChange={(e) =>
-                  handleFaqChange(index, "question", e.target.value)
-                }
-              />
+              <Input placeholder="Question" value={faq.question} onChange={e => handleFaqChange(i, "question", e.target.value)} className="rounded-xl" />
               <textarea
                 placeholder="Answer"
-                className="w-full p-2 rounded-md border bg-background text-sm outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2.5 rounded-xl border border-input bg-background text-sm focus:ring-1 focus:ring-primary outline-none resize-none min-h-[70px]"
                 value={faq.answer}
-                onChange={(e) =>
-                  handleFaqChange(index, "answer", e.target.value)
-                }
+                onChange={e => handleFaqChange(i, "answer", e.target.value)}
               />
             </div>
           ))}
-        </div>
+        </fieldset>
 
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full py-6 text-lg font-bold"
-        >
-          {loading ? (
-            <Loader2 className="animate-spin mr-2" />
-          ) : (
-            <Send className="mr-2" />
-          )}
-          Publish to ERP
+        <Button type="submit" disabled={loading} className="w-full py-6 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
+          {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Send className="mr-2" size={18} />}
+          Publish Project to ERP
         </Button>
       </form>
     </div>

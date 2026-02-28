@@ -49,7 +49,7 @@ const Sidebar = () => {
 
   // Only show menu items allowed for the current role
   const mainMenu = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/", roles: ["admin", "manager", "developer", "client", "user"] },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/", roles: ["admin", "manager", "developer"] },
     { icon: Briefcase, label: "Projects", path: "/projects", roles: ["admin", "manager", "developer"] },
     { icon: Users, label: "Clients", path: "/clients", roles: ["admin", "manager"] },
     { icon: BarChart3, label: "Analytics", path: "/analytics", roles: ["admin"] },
