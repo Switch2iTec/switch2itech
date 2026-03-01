@@ -1,12 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
-@layer components {
-  .signup-input {
-    @apply w-full h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 
-    dark:border-zinc-800 dark:bg-zinc-900 dark:text-white focus:outline-none focus:ring-2 
-    focus:ring-indigo-500/20 focus:border-indigo-500 transition-all;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Custom Utilities — Tailwind v4 uses @utility instead of @layer components
+   so that classes like `auth-input` can be used with @apply in JSX.
+───────────────────────────────────────────────────────────────────────────── */
+
+@utility auth-input {
+  width: 100%;
+  height: 3rem;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  outline: none;
+  transition: all 0.2s;
+
+  &::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  &:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
   }
 }
+
+@utility signup-input {
+  width: 100%;
+  height: 3rem;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  outline: none;
+  transition: all 0.2s;
+
+  &::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  &:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+  }
+}
+
+@utility page-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@utility page-title {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+@utility page-subtitle {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.25rem;
+}
+
+@utility stat-card {
+  border-radius: 1rem;
+  border: 1px solid hsl(var(--border) / 0.5);
+  background-color: hsl(var(--card));
+  padding: 1.5rem;
+  transition: all 0.3s;
+
+  &:hover {
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+}
+
+/* ── Theme tokens ────────────────────────────────────────────────────────── */
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -30,10 +115,10 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  /* Dark mode triggered by .dark class */
   --dark-mode: class;
 }
 
+/* ── CSS Variables ───────────────────────────────────────────────────────── */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -59,7 +144,6 @@
   }
 
   .dark {
-    /* Pure black dark mode */
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
     --card: 0 0% 4%;
@@ -88,9 +172,35 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
 
-/* Scrollbar utilities */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

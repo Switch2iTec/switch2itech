@@ -1,145 +1,78 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { Search, Star, StarHalf, Loader2 } from "lucide-react";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
+import React, { useState, useEffect } from "react"
+import userService from "../../api/userService"
+import projectService from "../../api/projectService"
+import { Search, Star, StarHalf, Users, Briefcase, Loader2 } from "lucide-react"
+import { Input } from "../../components/ui/input"
 
 const Top = ({ onSearch }) => {
-  // Added onSearch prop for functionality
-  const [counts, setCounts] = useState({ clients: 0, projects: 0 });
-  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState({ clients: 0, projects: 0 })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetching both users and projects
         const [userRes, projectRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/users", {
-            withCredentials: true,
-          }),
-          axios.get("http://localhost:5000/api/projects", {
-            withCredentials: true,
-          }),
-        ]);
-
-        if (
-          userRes.data.status === "success" &&
-          projectRes.data.status === "success"
-        ) {
-          // Filter users to count only those with role 'client'
-          const clientCount = userRes.data.data.filter(
-            (u) => u.role === "client"
-          ).length;
-          // Count only projects that are not 'cancelled'
-          const activeProjectCount = projectRes.data.data.filter(
-            (p) => p.status === "active"
-          ).length;
-
+          userService.getUsers(),
+          projectService.getAllProjects()
+        ])
+        if (userRes.data.status === "success" && projectRes.data.status === "success") {
           setCounts({
-            clients: clientCount,
-            projects: activeProjectCount,
-          });
+            clients: userRes.data.data.filter(u => u.role === "client").length,
+            projects: projectRes.data.data.filter(p => p.status === "active").length,
+          })
         }
       } catch (err) {
-        console.error("Error fetching top stats:", err);
+        console.error("Error fetching client stats:", err)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    fetchStats();
-  }, []);
+    }
+    fetchStats()
+  }, [])
 
   const stats = [
-    {
-      label: "Total clients",
-      value: loading ? "..." : counts.clients.toLocaleString(),
-      imgUrl: "/Images/Client/People.png",
-      bgColor: "bg-blue-500/10",
-    },
-    {
-      label: "Active Projects",
-      value: loading ? "..." : counts.projects.toLocaleString(),
-      subtext: "Ongoing",
-      imgUrl: "/Images/Client/Office.png",
-      bgColor: "bg-emerald-500/10",
-    },
-    {
-      label: "Client satisfaction",
-      value: "4.8",
-      subtext: "",
-      imgUrl: "/Images/Client/Star.png",
-      bgColor: "bg-amber-500/10",
-    },
-  ];
+    { label: "Total Clients", value: loading ? "···" : counts.clients, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Active Projects", value: loading ? "···" : counts.projects, icon: Briefcase, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Client Satisfaction", value: "4.8", icon: Star, color: "text-amber-500", bg: "bg-amber-500/10", isRating: true },
+  ]
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
-          <Card
-            key={index}
-            className="border-border bg-card shadow-sm flex items-center p-6 rounded-3xl transition-all duration-300"
-          >
-            <div
-              className={`w-14 h-14 rounded-2xl ${stat.bgColor} flex items-center justify-center shrink-0`}
-            >
-              <img
-                src={stat.imgUrl}
-                alt={stat.label}
-                className="w-8 h-8 object-contain"
-              />
+    <div className="space-y-6">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {stats.map((s, i) => (
+          <div key={i} className="stat-card flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${s.bg} shrink-0`}>
+              <s.icon size={19} className={s.color} />
             </div>
-
-            <div className="flex flex-col justify-center ml-4">
-              <p className="text-sm font-medium text-muted-foreground leading-tight mb-1">
-                {stat.label}
-              </p>
-              <div className="flex items-end gap-2">
-                <h2 className="text-2xl font-bold text-foreground leading-none">
-                  {stat.value}
-                </h2>
-
-                {stat.label === "Client satisfaction" && (
-                  <div className="flex items-center gap-0.5 mb-1">
-                    {[...Array(4)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={14}
-                        className="fill-amber-400 text-amber-400"
-                      />
-                    ))}
-                    <StarHalf
-                      size={14}
-                      className="fill-amber-400 text-amber-400"
-                    />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{s.label}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <h3 className="text-2xl font-extrabold tracking-tight">{s.value}</h3>
+                {s.isRating && (
+                  <div className="flex text-amber-400 gap-0.5 mb-0.5">
+                    {[...Array(4)].map((_, k) => <Star key={k} size={11} fill="currentColor" />)}
+                    <StarHalf size={11} fill="currentColor" />
                   </div>
-                )}
-
-                {stat.subtext && (
-                  <span className="text-xs font-medium text-muted-foreground mb-0.5 whitespace-nowrap">
-                    {stat.subtext}
-                  </span>
                 )}
               </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
 
-      {/* Search Input */}
-      <div className="relative w-full max-w-2xl">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-muted-foreground" />
-        </div>
+      {/* Search */}
+      <div className="relative max-w-2xl">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
         <Input
           type="text"
-          placeholder="Search by name, company or email..."
-          onChange={(e) => onSearch(e.target.value)}
-          className="bg-card border-border rounded-2xl py-6 pl-12 pr-4 text-sm shadow-sm transition-all"
+          placeholder="Search by name, company or email…"
+          onChange={(e) => onSearch && onSearch(e.target.value)}
+          className="pl-11 rounded-2xl h-12"
         />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Top;
+export default Top

@@ -1,197 +1,171 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { 
-  TrendingUp, TrendingDown, DollarSign, 
-  Briefcase, CreditCard, Download, 
-  Calendar, ArrowUpRight, Filter,
-  Search, CheckCircle2, Clock
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Badge } from "../../components/ui/badge";
+import React, { useState, useEffect } from "react"
+import projectService from "../../api/projectService"
+import {
+  TrendingUp, DollarSign, Briefcase, CreditCard,
+  Clock, Download, Calendar, ArrowUpRight, Search
+} from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card"
+import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
+import { Badge } from "../../components/ui/badge"
 
 const MOCK_REVENUE_DATA = [
-  {
-    _id: "rev1",
-    projectName: "E-Commerce Platform",
-    client: "Global Retail Inc.",
-    amount: 12500.00,
-    status: "Paid",
-    date: "2026-02-10",
-    paymentMethod: "Bank Transfer",
-    category: "Development"
-  },
-  {
-    _id: "rev2",
-    projectName: "Cloud Migration",
-    client: "FinFlow IO",
-    amount: 8200.00,
-    status: "Pending",
-    date: "2026-02-20",
-    paymentMethod: "Stripe",
-    category: "Consulting"
-  },
-  {
-    _id: "rev3",
-    projectName: "UI/UX Redesign",
-    client: "Aether AI",
-    amount: 4500.00,
-    status: "Paid",
-    date: "2026-01-25",
-    paymentMethod: "PayPal",
-    category: "Design"
-  }
-];
+  { _id: "rev1", projectName: "E-Commerce Platform", client: "Global Retail Inc.", amount: 12500, status: "Paid", date: "2026-02-10", paymentMethod: "Bank Transfer", category: "Development" },
+  { _id: "rev2", projectName: "Cloud Migration", client: "FinFlow IO", amount: 8200, status: "Pending", date: "2026-02-20", paymentMethod: "Stripe", category: "Consulting" },
+  { _id: "rev3", projectName: "UI/UX Redesign", client: "Aether AI", amount: 4500, status: "Paid", date: "2026-01-25", paymentMethod: "PayPal", category: "Design" },
+]
 
 const Revenuepage = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [transactions, setTransactions] = useState([])
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-    const fetchRevenue = async () => {
+    const fetch = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/revenue");
-        setTransactions(res.data?.length > 0 ? res.data : MOCK_REVENUE_DATA);
-      } catch (err) {
-        setTransactions(MOCK_REVENUE_DATA);
+        const res = await projectService.getAllProjects()
+        const mapped = (res.data?.data || []).map(p => ({
+          _id: p._id,
+          projectName: p.title || p.name,
+          client: p.clients?.[0]?.name || "Internal",
+          amount: p.budget || 0,
+          status: p.completedAt ? "Paid" : "Pending",
+          date: new Date(p.startDate || Date.now()).toLocaleDateString(),
+          paymentMethod: "Project Budget",
+          category: p.category || "Development",
+        }))
+        setTransactions(mapped.length > 0 ? mapped : MOCK_REVENUE_DATA)
+      } catch {
+        setTransactions(MOCK_REVENUE_DATA)
       }
-    };
-    fetchRevenue();
-  }, []);
+    }
+    fetch()
+  }, [])
+
+  const total = transactions.reduce((s, t) => s + (t.amount || 0), 0)
+  const pending = transactions.filter(t => t.status === "Pending").reduce((s, t) => s + (t.amount || 0), 0)
 
   const stats = [
-    { label: "Total Revenue", value: "$125,450", trend: "+18%", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-500/10" },
-    { label: "Pending Invoices", value: "$14,200", trend: "3 Items", icon: Clock, color: "text-amber-600", bg: "bg-amber-500/10" },
-    { label: "Project Earnings", value: "$88,400", trend: "70% of total", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-500/10" },
-    { label: "Avg. Deal Size", value: "$4,200", trend: "+5%", icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-500/10" },
-  ];
+    { label: "Total Revenue", value: `$${total.toLocaleString()}`, trend: "+18%", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Pending Invoices", value: `$${pending.toLocaleString()}`, trend: `${transactions.filter(t => t.status === "Pending").length} items`, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "Project Earnings", value: "$88,400", trend: "70% of total", icon: Briefcase, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Average Deal Size", value: `$${Math.round(total / Math.max(transactions.length, 1)).toLocaleString()}`, trend: "+5%", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
+  ]
+
+  const filtered = transactions.filter(t =>
+    (t.projectName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.client || "").toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
-    <div className="p-6 lg:p-10 space-y-8 bg-background min-h-screen animate-in fade-in duration-500">
-      
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen bg-background p-8 space-y-8 animate-in fade-in duration-400">
+
+      {/* Header */}
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Financial Overview</h1>
-          <p className="text-muted-foreground font-medium">Track project earnings, transaction history, and fiscal growth.</p>
+          <h1 className="page-title">Financial Overview</h1>
+          <p className="page-subtitle">Track project earnings, transaction history, and fiscal growth</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-xl h-11 gap-2"><Calendar size={18} /> Last 30 Days</Button>
-          <Button className="rounded-xl h-11 px-6 gap-2 shadow-lg shadow-primary/20"><Download size={18} /> Export Report</Button>
+          <Button variant="outline" className="rounded-xl gap-2"><Calendar size={15} /> Last 30 Days</Button>
+          <Button className="rounded-xl gap-2 shadow-sm shadow-primary/20"><Download size={15} /> Export Report</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <Card key={i} className="border-border/40">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color}`}>
-                  <stat.icon size={22} />
-                </div>
-                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider">
-                  {stat.trend}
-                </Badge>
-              </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
-              <h2 className="text-3xl font-black">{stat.value}</h2>
-            </CardContent>
-          </Card>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {stats.map((s, i) => (
+          <div key={i} className="stat-card">
+            <div className="flex items-start justify-between mb-5">
+              <div className={`p-3 rounded-xl ${s.bg}`}><s.icon size={19} className={s.color} /></div>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-secondary text-muted-foreground px-2.5 py-1 rounded-lg">{s.trend}</span>
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{s.label}</p>
+            <h3 className="text-2xl font-extrabold mt-1 tracking-tight">{s.value}</h3>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <Card className="lg:col-span-2 border-border/50">
-          <CardHeader className="flex flex-col md:flex-row items-center justify-between border-b pb-6 gap-4">
+      {/* Content grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Revenue Ledger */}
+        <Card className="lg:col-span-2 rounded-2xl border-border/50 shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between px-6 pt-6 pb-4 border-b border-border/40 gap-4">
             <div>
-              <CardTitle className="text-xl">Project Revenue Ledger</CardTitle>
-              <CardDescription>Breakdown of earnings by individual project</CardDescription>
+              <CardTitle className="text-base font-extrabold">Revenue Ledger</CardTitle>
+              <CardDescription className="text-xs">Earnings breakdown by project</CardDescription>
             </div>
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input 
-                placeholder="Search projects..." 
-                className="pl-9 h-10 rounded-xl"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="relative w-60">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+              <Input placeholder="Search projects…" className="pl-9 h-9 rounded-xl text-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-muted/30 border-b text-[11px] font-black uppercase text-muted-foreground">
-                    <th className="p-5">Project & Client</th>
-                    <th className="p-5">Category</th>
-                    <th className="p-5">Amount</th>
-                    <th className="p-5">Status</th>
-                    <th className="p-5 text-right">Action</th>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-secondary/30 border-b border-border/40 text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground/60">
+                  <th className="px-6 py-3.5">Project &amp; Client</th>
+                  <th className="px-6 py-3.5">Category</th>
+                  <th className="px-6 py-3.5">Amount</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5 text-right" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {filtered.map(item => (
+                  <tr key={item._id} className="group hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-sm">{item.projectName}</p>
+                      <p className="text-[11px] text-muted-foreground">{item.client}</p>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{item.category}</td>
+                    <td className="px-6 py-4 font-extrabold text-sm">${(item.amount || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <Badge className={`rounded-lg border text-[10px] font-black uppercase px-2.5 py-1 ${item.status === "Paid" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
+                        {item.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                        <ArrowUpRight size={14} />
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {transactions.map((item) => (
-                    <tr key={item._id} className="hover:bg-muted/20 transition-colors group">
-                      <td className="p-5">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm">{item.projectName}</span>
-                          <span className="text-[11px] text-muted-foreground">{item.client}</span>
-                        </div>
-                      </td>
-                      <td className="p-5 text-xs font-medium text-muted-foreground">{item.category}</td>
-                      <td className="p-5 font-black text-sm">${item.amount.toLocaleString()}</td>
-                      <td className="p-5">
-                        <Badge className={`rounded-lg px-2 text-[10px] uppercase font-bold border-none ${
-                          item.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                        }`}>
-                          {item.status}
-                        </Badge>
-                      </td>
-                      <td className="p-5 text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg group-hover:bg-primary group-hover:text-white transition-all">
-                          <ArrowUpRight size={16} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-muted/10">
-          <CardHeader>
-            <CardTitle className="text-xl">Recent Activity</CardTitle>
-            <CardDescription>Incoming payments and audits</CardDescription>
+        {/* Recent Activity */}
+        <Card className="rounded-2xl border-border/50 shadow-sm">
+          <CardHeader className="px-6 pt-6 pb-4 border-b border-border/40">
+            <CardTitle className="text-base font-extrabold">Recent Activity</CardTitle>
+            <CardDescription className="text-xs">Incoming payments and audits</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {transactions.map((item, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                  item.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'
-                }`}>
-                  <CreditCard size={18} />
+          <CardContent className="px-6 py-5 space-y-4">
+            {transactions.slice(0, 5).map((item, i) => (
+              <div key={i} className="flex items-center gap-3.5">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${item.status === "Paid" ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary text-muted-foreground"}`}>
+                  <CreditCard size={16} />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold leading-tight">{item.client}</p>
-                  <p className="text-[11px] text-muted-foreground italic">{item.paymentMethod} • {item.date}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{item.client}</p>
+                  <p className="text-[11px] text-muted-foreground">{item.paymentMethod} · {item.date}</p>
                 </div>
-                <div className="text-right font-black text-sm">
-                  {item.status === 'Paid' ? `+$${item.amount}` : `$${item.amount}`}
-                </div>
+                <span className={`text-sm font-extrabold shrink-0 ${item.status === "Paid" ? "text-emerald-600" : "text-amber-600"}`}>
+                  {item.status === "Paid" ? "+" : ""}${(item.amount || 0).toLocaleString()}
+                </span>
               </div>
             ))}
-            <Button variant="outline" className="w-full rounded-xl mt-4 font-bold text-xs uppercase tracking-widest">
+            <Button variant="outline" className="w-full rounded-xl font-bold text-xs uppercase tracking-widest mt-2">
               View All Transactions
             </Button>
           </CardContent>
         </Card>
-
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Revenuepage;
+export default Revenuepage
