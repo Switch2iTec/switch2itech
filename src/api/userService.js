@@ -22,6 +22,15 @@ const userService = {
      * @param {string} role - New role
      */
     updateUserRole: (id, role) => apiClient.patch(`/users/${id}`, { role }),
+
+    /**
+     * Update user profile (details, password, avatar)
+     * @param {Object|FormData} data
+     */
+    updateProfile: (data) => {
+        const config = data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+        return apiClient.put('/users/profile', data, config);
+    },
 };
 
 export default userService;
