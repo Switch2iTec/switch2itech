@@ -8,6 +8,9 @@ import {
   ChevronRight,
   Loader2,
   MessageSquareOff,
+  CheckCircle2,
+  XCircle,
+  X
 } from "lucide-react";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -22,11 +25,14 @@ const Main = () => {
   const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6; // Increased for a better grid feel
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const itemsPerPage = 6;
 
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
 
-
-  // 1. Fetch Testimonials from BE
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -34,9 +40,10 @@ const Main = () => {
         const response = await testimonialService.getTestimonials();
         const data = response.data.data || response.data;
         setTestimonials(Array.isArray(data) ? data : []);
+        showToast("Testimonials synced successfully");
       } catch (error) {
-        console.error(error);
         console.error("Error fetching testimonials:", error);
+        showToast("Failed to fetch testimonials", "error");
       } finally {
         setLoading(false);
       }
@@ -44,20 +51,19 @@ const Main = () => {
     fetchData();
   }, []);
 
-  // 2. Delete Handler
   const handleDelete = async (id) => {
     if (window.confirm("Delete this testimonial?")) {
       try {
         await testimonialService.deleteTestimonial(id);
         setTestimonials(testimonials.filter((t) => t._id !== id));
+        showToast("Testimonial deleted", "error");
       } catch (error) {
         console.error(error);
-        alert("Failed to delete");
+        showToast("Failed to delete", "error");
       }
     }
   };
 
-  // Pagination Logic
   const totalItems = testimonials.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -67,20 +73,28 @@ const Main = () => {
   const handlePageChange = (pageNumber) => {
     if (pageNumber >= 1 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
+      showToast(`Switched to page ${pageNumber}`);
     }
   };
 
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  );
+
   const TestimonialCard = ({ item }) => {
-    // Logic to handle Author info (User Object vs Overrides)
-    const displayName =
-      item.authorNameOverride || item.author?.name || "Anonymous";
-    const displayRole =
-      item.authorRoleOverride ||
-      (item.author?.role === "client" ? "Client" : "User");
-    const displayAvatar =
-      item.authorAvatarOverride ||
-      item.author?.profile ||
-      `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
+    const displayName = item.authorNameOverride || item.author?.name || "Anonymous";
+    const displayRole = item.authorRoleOverride || (item.author?.role === "client" ? "Client" : "User");
+    const displayAvatar = item.authorAvatarOverride || item.author?.profile || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`;
     const displayDate = new Date(item.createdAt).toLocaleDateString();
 
     return (
@@ -89,23 +103,13 @@ const Main = () => {
           <div className="flex justify-between items-start mb-4">
             <div className="flex gap-3">
               <Avatar className="w-12 h-12 rounded-full border border-border">
-                <AvatarImage
-                  src={displayAvatar}
-                  alt={displayName}
-                  className="object-cover"
-                />
+                <AvatarImage src={displayAvatar} alt={displayName} className="object-cover" />
                 <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <h4 className="font-bold text-foreground text-sm leading-tight">
-                  {displayName}
-                </h4>
-                <p className="text-[11px] text-indigo-500 font-bold leading-tight mt-0.5">
-                  {displayRole}
-                </p>
-                <p className="text-[10px] text-muted-foreground/60 leading-tight uppercase mt-1 tracking-wider">
-                  {displayDate}
-                </p>
+                <h4 className="font-bold text-foreground text-sm leading-tight">{displayName}</h4>
+                <p className="text-[11px] text-indigo-500 font-bold leading-tight mt-0.5">{displayRole}</p>
+                <p className="text-[10px] text-muted-foreground/60 leading-tight uppercase mt-1 tracking-wider">{displayDate}</p>
               </div>
             </div>
             <div className="flex gap-0.5">
@@ -115,21 +119,13 @@ const Main = () => {
                   size={12}
                   fill={i < item.rating ? "#fbbf24" : "none"}
                   stroke={i < item.rating ? "#fbbf24" : "currentColor"}
-                  className={
-                    i < item.rating
-                      ? "text-amber-400"
-                      : "text-muted-foreground/20"
-                  }
+                  className={i < item.rating ? "text-amber-400" : "text-muted-foreground/20"}
                 />
               ))}
             </div>
           </div>
-
-          <p className="text-xs text-muted-foreground leading-relaxed mb-6 italic">
-            "{item.content}"
-          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-6 italic">"{item.content}"</p>
         </div>
-
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
           <Badge
             variant={item.isApproved ? "success" : "outline"}
@@ -137,12 +133,12 @@ const Main = () => {
           >
             {item.isApproved ? "Published" : "Pending"}
           </Badge>
-
           <div className="flex items-center gap-1">
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-primary hover:bg-primary/10"
+              onClick={() => showToast(`Editing testimonial by ${displayName}`)}
             >
               <Pencil size={16} />
             </Button>
@@ -164,9 +160,7 @@ const Main = () => {
     return (
       <div className="h-64 w-full flex flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-primary" size={32} />
-        <p className="text-sm font-medium text-muted-foreground">
-          Loading testimonials...
-        </p>
+        <p className="text-sm font-medium text-muted-foreground">Loading testimonials...</p>
       </div>
     );
 
@@ -179,15 +173,14 @@ const Main = () => {
     );
 
   return (
-    <div className="flex flex-col gap-12 pb-10">
-      {/* Dynamic Masonry-style Grid */}
+    <div className="flex flex-col gap-12 pb-10 relative">
+      <ToastUI />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6">
         {currentItems.map((item) => (
           <TestimonialCard key={item._id} item={item} />
         ))}
       </div>
 
-      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
           <div className="flex flex-col">
@@ -197,12 +190,9 @@ const Main = () => {
                 {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)}
               </span>{" "}
               of{" "}
-              <span className="font-semibold text-foreground">
-                {totalItems}
-              </span>
+              <span className="font-semibold text-foreground">{totalItems}</span>
             </p>
           </div>
-
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -213,7 +203,6 @@ const Main = () => {
             >
               <ChevronLeft size={18} />
             </Button>
-
             {[...Array(totalPages)].map((_, i) => (
               <Button
                 key={i + 1}
@@ -224,7 +213,6 @@ const Main = () => {
                 {i + 1}
               </Button>
             ))}
-
             <Button
               variant="outline"
               size="icon"

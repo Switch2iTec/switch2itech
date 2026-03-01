@@ -11,17 +11,25 @@ import {
   ArrowLeft,
   ShoppingCart,
   Download,
+  CheckCircle2,
+  XCircle,
+  X,
 } from "lucide-react";
 import { ProductGallery } from "./ProductGallery";
 import { FeatureCard } from "./FeatureCard";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewForm } from "./ReviewForm";
 
-// product aur onBack props receive ho rahay hain
 export default function App({ product, onBack }) {
   const [quantity, setQuantity] = useState(1);
   const [reviewFormOpen, setReviewFormOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
 
   useEffect(() => {
     const updateScrollProgress = () => {
@@ -36,7 +44,34 @@ export default function App({ product, onBack }) {
     return () => window.removeEventListener("scroll", updateScrollProgress);
   }, []);
 
-  // --- IMAGE LOGIC (Design same rakhne ke liye) ---
+  const handleBack = () => {
+    showToast("Returning to dashboard...");
+    setTimeout(onBack, 400);
+  };
+
+  const handleBuyNow = () => {
+    showToast(`Redirecting to checkout for ${quantity} license(s)...`);
+  };
+
+  const handleQuantityChange = (val) => {
+    setQuantity(Number(val));
+    showToast(`Plan updated to ${val} license(s)`);
+  };
+
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-5 py-4 border rounded-2xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-destructive/10 border-destructive text-destructive' : 'bg-card border-border text-card-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={20} /> : <CheckCircle2 size={20} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100 transition-opacity">
+          <X size={16} />
+        </button>
+      </div>
+    )
+  );
+
   const productImages = [
     product?.coverImage ||
       "https://images.unsplash.com/photo-1759752394755-1241472b589d?q=80&w=1080",
@@ -45,60 +80,29 @@ export default function App({ product, onBack }) {
   ];
 
   const features = [
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description:
-        "Optimized performance ensures smooth and responsive experience.",
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Security",
-      description:
-        "Bank-level encryption and protocols to keep your data safe.",
-    },
-    {
-      icon: Users,
-      title: "Team Collaboration",
-      description: "Work seamlessly with your team in real-time.",
-    },
-    {
-      icon: BarChart,
-      title: "Advanced Analytics",
-      description: "Gain insights with comprehensive reporting features.",
-    },
-    {
-      icon: Lock,
-      title: "Privacy First",
-      description: "Your data stays yours. We never share your information.",
-    },
-    {
-      icon: Download,
-      title: "Offline Access",
-      description:
-        "Access your work anywhere, anytime with full offline support.",
-    },
+    { icon: Zap, title: "Lightning Fast", description: "Optimized performance ensures smooth and responsive experience." },
+    { icon: Shield, title: "Enterprise Security", description: "Bank-level encryption and protocols to keep your data safe." },
+    { icon: Users, title: "Team Collaboration", description: "Work seamlessly with your team in real-time." },
+    { icon: BarChart, title: "Advanced Analytics", description: "Gain insights with comprehensive reporting features." },
+    { icon: Lock, title: "Privacy First", description: "Your data stays yours. We never share your information." },
+    { icon: Download, title: "Offline Access", description: "Access your work anywhere, anytime with full offline support." },
   ];
 
   const reviews = [
     {
       name: "Sarah Johnson",
-      avatar:
-        "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?q=80&w=1080",
+      avatar: "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?q=80&w=1080",
       role: "Product Manager",
       rating: 5,
-      comment:
-        "This has completely transformed how our team works. The collaboration features are outstanding.",
+      comment: "This has completely transformed how our team works. The collaboration features are outstanding.",
       date: "Feb 15, 2026",
     },
     {
       name: "Michael Chen",
-      avatar:
-        "https://images.unsplash.com/photo-1652471943570-f3590a4e52ed?q=80&w=1080",
+      avatar: "https://images.unsplash.com/photo-1652471943570-f3590a4e52ed?q=80&w=1080",
       role: "Software Engineer",
       rating: 5,
-      comment:
-        "As a developer, I appreciate the attention to detail. The offline mode is a game-changer.",
+      comment: "As a developer, I appreciate the attention to detail. The offline mode is a game-changer.",
       date: "Feb 10, 2026",
     },
   ];
@@ -106,7 +110,8 @@ export default function App({ product, onBack }) {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative">
+      <ToastUI />
       <div
         className="fixed top-0 left-0 h-1 bg-primary z-50 transition-all duration-150 ease-out"
         style={{ width: `${scrollProgress}%` }}
@@ -117,7 +122,7 @@ export default function App({ product, onBack }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={onBack}
+                onClick={handleBack}
                 className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -142,12 +147,10 @@ export default function App({ product, onBack }) {
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary border border-primary/20">
                 {product.status || "Active"}
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => showToast("4.9 average from verified users")}>
                 <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                 <span className="text-sm font-semibold">4.9</span>
-                <span className="text-xs text-muted-foreground">
-                  (2,847 reviews)
-                </span>
+                <span className="text-xs text-muted-foreground">(2,847 reviews)</span>
               </div>
             </div>
 
@@ -156,54 +159,29 @@ export default function App({ product, onBack }) {
             </h2>
 
             <p className="mb-8 text-lg text-muted-foreground leading-relaxed">
-              {product.description ||
-                "The ultimate productivity platform for modern teams."}
+              {product.description || "The ultimate productivity platform for modern teams."}
             </p>
 
             <div className="mb-8 rounded-2xl border border-border bg-card p-8 shadow-sm">
               <div className="mb-6 flex items-baseline gap-3">
-                <span className="text-xl text-muted-foreground line-through decoration-primary/40">
-                  $299
-                </span>
-                <span className="text-4xl font-bold text-foreground">
-                  ${product.budget || "199"}
-                </span>
-                <span className="rounded-lg bg-destructive/10 px-3 py-1 text-sm font-bold text-destructive border border-destructive/20">
-                  Save $100
-                </span>
+                <span className="text-xl text-muted-foreground line-through decoration-primary/40">$299</span>
+                <span className="text-4xl font-bold text-foreground">${product.budget || "199"}</span>
+                <span className="rounded-lg bg-destructive/10 px-3 py-1 text-sm font-bold text-destructive border border-destructive/20">Save $100</span>
               </div>
 
               <div className="mb-6">
                 <div className="flex justify-between items-end mb-2">
-                  <span className="text-sm font-semibold">
-                    Project Availability
-                  </span>
-                  <span className="text-xs font-bold text-primary">
-                    85% Ready
-                  </span>
+                  <span className="text-sm font-semibold">Project Availability</span>
+                  <span className="text-xs font-bold text-primary">85% Ready</span>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-1000"
-                    style={{ width: "85%" }}
-                  />
+                  <div className="bg-primary h-full rounded-full transition-all duration-1000" style={{ width: "85%" }} />
                 </div>
               </div>
 
               <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(product.tags?.length > 0
-                  ? product.tags
-                  : [
-                      "Lifetime access",
-                      "Free updates",
-                      "Priority support",
-                      "30-day guarantee",
-                    ]
-                ).map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center gap-2.5 text-sm font-medium"
-                  >
+                {(product.tags?.length > 0 ? product.tags : ["Lifetime access", "Free updates", "Priority support", "30-day guarantee"]).map((item) => (
+                  <div key={item} className="flex items-center gap-2.5 text-sm font-medium">
                     <div className="rounded-full bg-primary/20 p-1">
                       <Check className="h-3 w-3 text-primary" />
                     </div>
@@ -215,16 +193,17 @@ export default function App({ product, onBack }) {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                 <select
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
                   className="flex-1 rounded-md border border-input bg-background px-3 py-3 text-sm focus:ring-2 focus:ring-ring cursor-pointer"
                 >
-                  <option value={1}>
-                    1 License - ${product.budget || "199"}
-                  </option>
+                  <option value={1}>1 License - ${product.budget || "199"}</option>
                   <option value={5}>5 Licenses - $899</option>
                 </select>
 
-                <button className="flex-[1.5] flex items-center justify-center gap-2 rounded-md bg-primary px-8 py-3 font-bold text-primary-foreground shadow transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <button 
+                  onClick={handleBuyNow}
+                  className="flex-[1.5] flex items-center justify-center gap-2 rounded-md bg-primary px-8 py-3 font-bold text-primary-foreground shadow transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                >
                   <ShoppingCart className="h-4 w-4" />
                   Buy Now
                 </button>
@@ -234,22 +213,16 @@ export default function App({ product, onBack }) {
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3">
               <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <p className="text-sm font-medium text-foreground">
-                Priority: {product.priority?.toUpperCase()} - Started{" "}
-                {new Date(product.createdAt).toLocaleDateString()}
+                Priority: {product.priority?.toUpperCase()} - Started {new Date(product.createdAt).toLocaleDateString()}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Features Section - 100% Original */}
         <section className="mb-24 py-12">
           <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">
-              Powerful Features
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Everything you need to supercharge your productivity in one place.
-            </p>
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Powerful Features</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Everything you need to supercharge your productivity in one place.</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, index) => (
@@ -258,24 +231,23 @@ export default function App({ product, onBack }) {
                 icon={feature.icon}
                 title={feature.title}
                 description={feature.description}
+                onClick={() => showToast(`Info: ${feature.title}`)}
               />
             ))}
           </div>
         </section>
 
-        {/* Reviews Section - 100% Original */}
         <section className="mb-24">
           <div className="mb-10 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight mb-2">
-                Customer Reviews
-              </h2>
-              <p className="text-muted-foreground">
-                See what our customers are saying about {product.title}
-              </p>
+              <h2 className="text-3xl font-bold tracking-tight mb-2">Customer Reviews</h2>
+              <p className="text-muted-foreground">See what our customers are saying about {product.title}</p>
             </div>
             <button
-              onClick={() => setReviewFormOpen(true)}
+              onClick={() => {
+                setReviewFormOpen(true);
+                showToast("Opening review editor...");
+              }}
               className="inline-flex items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -289,7 +261,6 @@ export default function App({ product, onBack }) {
           </div>
         </section>
 
-        {/* Review Form Component - 100% Original */}
         <ReviewForm open={reviewFormOpen} onOpenChange={setReviewFormOpen} />
       </main>
     </div>

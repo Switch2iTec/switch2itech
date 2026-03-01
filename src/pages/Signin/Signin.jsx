@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Lock, Mail, ChevronRight, UserPlus, Loader2, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import authService from "../../api/authService";
 import { useAuth } from "../../context/ContextProvider";
 import logoUrl from "/Images/Logo.png";
@@ -9,25 +10,30 @@ const Signin = () => {
   const navigate = useNavigate();
   const { setAuthenticated, setUser, setRole } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [formData, setFormData] = useState({ email: "", password: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+
+    const toastId = toast.loading("Verifying credentials...");
+
     try {
       const response = await authService.login(formData);
       if (response.data.status === "success" || response.data.user) {
         const userData = response.data.data?.user || response.data.data || response.data.user;
+        
         setUser(userData);
         setRole(userData?.role || "user");
         setAuthenticated(true);
         localStorage.setItem("user", JSON.stringify(userData));
+        
+        toast.success(`Welcome back, ${userData.name || 'User'}!`, { id: toastId });
         navigate("/profile");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      const msg = err.response?.data?.message || "Invalid email or password";
+      toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -96,13 +102,6 @@ const Signin = () => {
             <h2 className="text-2xl font-extrabold tracking-tight">Welcome back</h2>
             <p className="text-sm text-muted-foreground">Sign in to access your dashboard</p>
           </div>
-
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded-xl text-sm font-medium">
-              {error}
-            </div>
-          )}
 
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>

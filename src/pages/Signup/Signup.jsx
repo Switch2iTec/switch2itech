@@ -3,17 +3,16 @@ import {
   User, Mail, Lock, Phone, Building, MapPin,
   Camera, ArrowRight, Briefcase, Loader2, Zap
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import authService from "../../api/authService";
 import { useAuth } from "../../context/ContextProvider";
-import { useNavigate } from "react-router-dom";
 import logoUrl from "/Images/Logo.png";
 
 const Signup = () => {
   const navigate = useNavigate();
   const { setAuthenticated, setUser, setRole } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -33,19 +32,25 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    
+    const toastId = toast.loading("Creating your workspace...");
+
     try {
       const response = await authService.register(formData);
       if (response.data.status === "success" || response.data.user) {
         const userData = response.data.data?.user || response.data.data || response.data.user;
+        
         setUser(userData);
         setRole(userData?.role || "user");
         setAuthenticated(true);
         localStorage.setItem("user", JSON.stringify(userData));
+        
+        toast.success("Account created successfully!", { id: toastId });
         navigate("/profile");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+      const msg = err.response?.data?.message || "Registration failed. Please try again.";
+      toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -65,11 +70,9 @@ const Signup = () => {
     <div className="min-h-screen flex bg-background">
       {/* ── Left Brand Panel ─────────────────────────────────────────── */}
       <div className="hidden lg:flex lg:w-[38%] flex-col justify-between p-12 bg-black relative overflow-hidden shrink-0">
-        {/* Gradient orbs */}
         <div className="absolute top-0 left-0 w-72 h-72 bg-primary/20 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-700/15 rounded-full blur-[120px] translate-x-1/4 translate-y-1/4 pointer-events-none" />
 
-        {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden">
             <img src={logoUrl} alt="Logo" className="h-8 w-8 object-contain" />
@@ -77,7 +80,6 @@ const Signup = () => {
           <span className="text-white font-black text-lg tracking-tight">Switch2iTech</span>
         </div>
 
-        {/* Hero text */}
         <div className="relative z-10 space-y-5">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/15 border border-primary/25 rounded-full">
             <Zap size={12} className="text-primary" />
@@ -92,7 +94,6 @@ const Signup = () => {
           </p>
         </div>
 
-        {/* Feature list */}
         <div className="relative z-10 space-y-3">
           {["Role-based project access", "Real-time team collaboration", "Client & testimonial management"].map((txt) => (
             <div key={txt} className="flex items-center gap-3">
@@ -111,7 +112,6 @@ const Signup = () => {
       {/* ── Right Form Panel ─────────────────────────────────────────── */}
       <div className="flex-1 flex items-start lg:items-center justify-center p-6 sm:p-10 overflow-y-auto">
         <div className="w-full max-w-2xl space-y-8 py-8">
-          {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-primary/10 border border-border flex items-center justify-center overflow-hidden">
               <img src={logoUrl} alt="Logo" className="h-7 w-7 object-contain" />
@@ -119,18 +119,10 @@ const Signup = () => {
             <span className="font-black text-lg tracking-tight">Switch2iTech</span>
           </div>
 
-          {/* Heading */}
           <div className="space-y-1">
             <h2 className="text-2xl font-extrabold tracking-tight">Create an account</h2>
             <p className="text-sm text-muted-foreground">Set up your profile to get started</p>
           </div>
-
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded-xl text-sm font-medium">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar upload */}
@@ -148,7 +140,6 @@ const Signup = () => {
               <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Profile Photo</span>
             </div>
 
-            {/* Fields grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {fields.map((field) => (
                 <div key={field.name} className={`space-y-1.5 ${field.span === 2 ? "md:col-span-2" : ""}`}>

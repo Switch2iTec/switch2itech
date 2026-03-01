@@ -3,7 +3,7 @@ import testimonialService from "../../api/testimonialService"
 import {
   Star, MessageSquare, Clock, Award, Search,
   Trash2, Eye, ThumbsUp, CheckCircle2,
-  Loader2, Globe
+  Loader2, Globe, X, AlertCircle
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -15,14 +15,23 @@ const Testimonialspage = () => {
   const [activeTab, setActiveTab] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
+
   const fetchTestimonials = async () => {
     try {
       setLoading(true)
       const res = await testimonialService.getTestimonials()
       setReviews(res.data?.data || [])
+      if (res.data?.data) showToast("Testimonials synced successfully")
     } catch (err) {
       console.error("Failed to fetch testimonials:", err)
       setReviews([])
+      showToast("Failed to fetch testimonials", "error")
     } finally {
       setLoading(false)
     }
@@ -35,10 +44,10 @@ const Testimonialspage = () => {
   const handleApprove = async (id, current) => {
     try {
       await testimonialService.approveTestimonial(id, { isApproved: !current })
-      // Or if approve is standalone boolean flag update: updateTestimonial(id, { isApproved })
       setReviews(prev => prev.map(r => r._id === id ? { ...r, isApproved: !current } : r))
+      showToast(current ? "Testimonial unpublished" : "Testimonial published successfully")
     } catch {
-      console.error("Failed to update approval status")
+      showToast("Failed to update approval status", "error")
     }
   }
 
@@ -46,8 +55,9 @@ const Testimonialspage = () => {
     try {
       await testimonialService.updateTestimonial(id, { isFeatured: !current })
       setReviews(prev => prev.map(r => r._id === id ? { ...r, isFeatured: !current } : r))
+      showToast(current ? "Removed from featured" : "Marked as featured")
     } catch {
-      console.error("Failed to toggle featured status")
+      showToast("Failed to toggle featured status", "error")
     }
   }
 
@@ -56,8 +66,9 @@ const Testimonialspage = () => {
     try {
       await testimonialService.deleteTestimonial(id)
       setReviews(prev => prev.filter(r => r._id !== id))
+      showToast("Testimonial deleted", "success")
     } catch {
-      console.error("Failed to delete testimonial")
+      showToast("Failed to delete testimonial", "error")
     }
   }
 
@@ -75,10 +86,24 @@ const Testimonialspage = () => {
     return matchesTab && matchesSearch
   })
 
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <AlertCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
+
   return (
     <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
+      <ToastUI />
 
-      {/* Hero Header */}
       <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-primary/5 pointer-events-none" />
         <div className="absolute -top-16 -left-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -96,14 +121,13 @@ const Testimonialspage = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-amber-500/20 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 border-0 text-white transition-all">
+            <Button onClick={() => showToast("Manual entry form coming soon", "error")} className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-amber-500/20 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 border-0 text-white transition-all">
               <ThumbsUp size={16} /> Add Review Manually
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="metric-card ring-1 ring-border/50 bg-card/40 hover:bg-card">
@@ -116,9 +140,7 @@ const Testimonialspage = () => {
         ))}
       </div>
 
-      {/* Table Card */}
       <div className="dashboard-glass rounded-2xl overflow-hidden border-border/50 shadow-sm">
-        {/* Filter bar */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-6 py-5 border-b border-border/40 bg-card/30">
           <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-xl w-fit border border-border/50">
             {["All", "Published", "Pending", "Featured"].map(tab => (
@@ -160,7 +182,6 @@ const Testimonialspage = () => {
               return (
                 <div key={review._id} className="group p-6 hover:bg-secondary/20 transition-colors">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                    {/* Author */}
                     <div className="flex items-start gap-4 w-60 shrink-0">
                       <img src={avatar} className="h-12 w-12 rounded-xl border border-border/60 object-cover shadow-sm group-hover:border-amber-500/50 transition-colors" alt="" />
                       <div>
@@ -182,7 +203,6 @@ const Testimonialspage = () => {
                       </div>
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground/80 leading-relaxed italic">"{review.content}"</p>
                       <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.15em] mt-3">
@@ -190,7 +210,6 @@ const Testimonialspage = () => {
                       </p>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
                       <Badge className={`border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1.5 ${review.isApproved ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "bg-amber-500/10 text-amber-600 border-amber-500/30"}`}>
                         {review.isApproved ? <CheckCircle2 size={10} /> : <Clock size={10} />}

@@ -20,6 +20,7 @@ const Addproduct = ({ onSuccess, initialData }) => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState({ type: "", message: "" });
     const [allClients, setAllClients] = useState([]);
+    const [toast, setToast] = useState({ show: false, message: '' });
 
     const [product, setProduct] = useState({
         name: "",
@@ -35,9 +36,13 @@ const Addproduct = ({ onSuccess, initialData }) => {
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
     const [faqs, setFaqs] = useState([{ question: "", answer: "" }]);
 
-    // Client linking (admin only)
     const isAdmin = role === "admin";
     const [selectedClients, setSelectedClients] = useState([]);
+
+    const showToast = (message) => {
+        setToast({ show: true, message });
+        setTimeout(() => setToast({ show: false, message: '' }), 3000);
+    };
 
     useEffect(() => {
         if (isAdmin) {
@@ -66,12 +71,16 @@ const Addproduct = ({ onSuccess, initialData }) => {
         const files = Array.from(e.target.files);
         setImages(files);
         setImagePreviews(files.map(f => URL.createObjectURL(f)));
+        showToast(`${files.length} gallery images selected`);
     };
 
     const handleThumbnailChange = (e) => {
         const file = e.target.files[0];
         setThumbnail(file);
-        if (file) setThumbnailPreview(URL.createObjectURL(file));
+        if (file) {
+            setThumbnailPreview(URL.createObjectURL(file));
+            showToast("Thumbnail uploaded");
+        }
     };
 
     const handleFaqChange = (i, field, val) => {
@@ -79,15 +88,30 @@ const Addproduct = ({ onSuccess, initialData }) => {
         updated[i][field] = val;
         setFaqs(updated);
     };
-    const addFaq = () => setFaqs([...faqs, { question: "", answer: "" }]);
-    const removeFaq = (i) => setFaqs(faqs.filter((_, idx) => idx !== i));
+    
+    const addFaq = () => {
+        setFaqs([...faqs, { question: "", answer: "" }]);
+        showToast("New FAQ slot added");
+    };
+
+    const removeFaq = (i) => {
+        setFaqs(faqs.filter((_, idx) => idx !== i));
+        showToast("FAQ removed");
+    };
 
     const addClient = (e) => {
-        if (e.target.value && !selectedClients.includes(e.target.value))
+        if (e.target.value && !selectedClients.includes(e.target.value)) {
             setSelectedClients([...selectedClients, e.target.value]);
+            const clientName = allClients.find(c => c._id === e.target.value)?.name;
+            showToast(`Linked client: ${clientName}`);
+        }
         e.target.value = "";
     };
-    const removeClient = (id) => setSelectedClients(selectedClients.filter(x => x !== id));
+
+    const removeClient = (id) => {
+        setSelectedClients(selectedClients.filter(x => x !== id));
+        showToast("Client unlinked");
+    };
 
     const reset = () => {
         setProduct({ name: "", desc: "", category: "", techStack: "" });
@@ -103,26 +127,20 @@ const Addproduct = ({ onSuccess, initialData }) => {
         setStatus({ type: "", message: "" });
 
         const formData = new FormData();
-
-        // Core fields
         formData.append("name", product.name);
         formData.append("desc", product.desc);
         formData.append("category", product.category);
 
-        // Tech stack: comma-separated → array
         if (product.techStack) {
             product.techStack.split(",").map(t => t.trim()).filter(Boolean).forEach(t => formData.append("techStack[]", t));
         }
 
-        // Clients (admin only)
         selectedClients.forEach(id => formData.append("clients[]", id));
 
-        // Media
         if (thumbnail) formData.append("thumbnail", thumbnail);
         images.forEach(img => formData.append("image", img));
         videos.forEach(vid => formData.append("video", vid));
 
-        // FAQs
         const validFaqs = faqs.filter(f => f.question && f.answer);
         if (validFaqs.length > 0) formData.append("faqs", JSON.stringify(validFaqs));
 
@@ -132,19 +150,31 @@ const Addproduct = ({ onSuccess, initialData }) => {
                 : await productService.createProduct(formData);
 
             if (response.data.status === "success" || response.data) {
-                setStatus({ type: "success", message: `Product ${initialData ? 'updated' : 'created'} successfully! 🎉` });
+                const msg = `Product ${initialData ? 'updated' : 'created'} successfully! 🎉`;
+                setStatus({ type: "success", message: msg });
+                showToast(msg);
                 if (!initialData) reset();
                 if (onSuccess) onSuccess();
             }
         } catch (err) {
-            setStatus({ type: "error", message: err.response?.data?.message || "Something went wrong!" });
+            const errorMsg = err.response?.data?.message || "Something went wrong!";
+            setStatus({ type: "error", message: errorMsg });
+            showToast("Action failed: Check requirements");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto bg-background p-2 transition-colors duration-300">
+        <div className="w-full max-w-3xl mx-auto bg-background p-2 transition-colors duration-300 relative">
+            
+            {toast.show && (
+                <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+                    <CheckCircle2 size={18} className="text-primary" />
+                    <span className="text-sm font-medium text-foreground">{toast.message}</span>
+                </div>
+            )}
+
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-foreground tracking-tight">{initialData ? 'Edit Product' : 'New Product'}</h2>
                 <p className="text-muted-foreground text-sm mt-1">{initialData ? 'Update the catalog entry attributes below.' : 'Add a new digital product or service to the catalog.'}</p>
@@ -159,7 +189,6 @@ const Addproduct = ({ onSuccess, initialData }) => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* ── Core Info ──────────────────────────────────────────────────── */}
                 <fieldset className="space-y-5 p-6 rounded-2xl border border-border/60 bg-card/40">
                     <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Core Information</legend>
 
@@ -191,19 +220,16 @@ const Addproduct = ({ onSuccess, initialData }) => {
                     </div>
                 </fieldset>
 
-                {/* ── Media Upload ─────────────────────────────────────────────── */}
                 <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
                     <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Media Assets</legend>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Thumbnail */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2 font-bold"><ImageIcon size={15} className="text-primary" /> Thumbnail</Label>
                             <Input type="file" accept="image/*" onChange={handleThumbnailChange} className="cursor-pointer rounded-xl" />
                             {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="mt-2 rounded-xl h-20 w-full object-cover border border-border" />}
                         </div>
 
-                        {/* Images */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2 font-bold"><ImageIcon size={15} className="text-primary" /> Gallery Images</Label>
                             <Input type="file" accept="image/*" multiple onChange={handleImagesChange} className="cursor-pointer rounded-xl" />
@@ -217,16 +243,14 @@ const Addproduct = ({ onSuccess, initialData }) => {
                             )}
                         </div>
 
-                        {/* Videos */}
                         <div className="space-y-2">
                             <Label className="flex items-center gap-2 font-bold"><Video size={15} className="text-primary" /> Demo Videos</Label>
-                            <Input type="file" accept="video/*" multiple onChange={e => setVideos(Array.from(e.target.files))} className="cursor-pointer rounded-xl" />
+                            <Input type="file" accept="video/*" multiple onChange={e => { setVideos(Array.from(e.target.files)); showToast("Videos queued"); }} className="cursor-pointer rounded-xl" />
                             {videos.length > 0 && <p className="text-xs text-muted-foreground mt-1">📹 {videos.length} video(s) selected</p>}
                         </div>
                     </div>
                 </fieldset>
 
-                {/* ── Client Linking (admin only) ───────────────────────────────── */}
                 {isAdmin && (
                     <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
                         <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2"><Users size={13} className="inline mr-1 text-primary" /> Link Clients</legend>
@@ -247,7 +271,6 @@ const Addproduct = ({ onSuccess, initialData }) => {
                     </fieldset>
                 )}
 
-                {/* ── FAQs ─────────────────────────────────────────────────────── */}
                 <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
                     <div className="flex items-center justify-between">
                         <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground">

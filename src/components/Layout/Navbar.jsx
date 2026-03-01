@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, Bell, Calendar, ChevronRight, Sun, Moon } from 'lucide-react'
+import { Search, Bell, Calendar, ChevronRight, Sun, Moon, CheckCircle2 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from './ThemeContext'
 import { Input } from '../ui/input'
@@ -12,6 +12,7 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [toast, setToast] = useState({ show: false, message: '' })
 
   const location = useLocation()
   const navigate = useNavigate()
@@ -30,6 +31,11 @@ const Navbar = () => {
   const currentPage = segments.length === 0
     ? 'Overview'
     : segments[segments.length - 1].charAt(0).toUpperCase() + segments[segments.length - 1].slice(1)
+
+  const showToast = (message) => {
+    setToast({ show: true, message })
+    setTimeout(() => setToast({ show: false, message: '' }), 3000)
+  }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,27 +59,40 @@ const Navbar = () => {
     }
   }
 
-  const handleSuggestionClick = (path) => {
+  const handleSuggestionClick = (path, name) => {
     navigate(path)
     setSearchQuery('')
     setShowSuggestions(false)
+    showToast(`Mapsd to ${name}`)
   }
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter' && suggestions.length > 0) handleSuggestionClick(suggestions[0].path)
+    if (e.key === 'Enter' && suggestions.length > 0) {
+      handleSuggestionClick(suggestions[0].path, suggestions[0].name)
+    }
+  }
+
+  const handleToggleTheme = () => {
+    toggleTheme()
+    showToast(`${!darkMode ? 'Light' : 'Dark'} mode enabled`)
   }
 
   return (
     <header className="h-16 px-6 flex items-center justify-between shrink-0 border-b border-border bg-card transition-colors duration-300 relative">
+      
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <CheckCircle2 size={18} className="text-primary" />
+          <span className="text-sm font-medium text-foreground">{toast.message}</span>
+        </div>
+      )}
 
-      {/* ── Breadcrumb ──────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 text-sm select-none">
         <span className="text-muted-foreground font-medium">Dashboard</span>
         <ChevronRight size={13} className="text-muted-foreground/40" />
         <span className="font-bold text-foreground tracking-tight">{currentPage}</span>
       </div>
 
-      {/* ── Search ──────────────────────────────────────────────── */}
       <div className="flex-1 max-w-sm mx-6 relative" ref={searchRef}>
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -93,7 +112,7 @@ const Navbar = () => {
             {suggestions.map((s, i) => (
               <div
                 key={i}
-                onClick={() => handleSuggestionClick(s.path)}
+                onClick={() => handleSuggestionClick(s.path, s.name)}
                 className="px-4 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between group"
               >
                 <span className="font-medium">{s.name}</span>
@@ -104,17 +123,18 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* ── Actions ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-1">
-        {/* Divider */}
         <div className="h-5 w-px bg-border mx-1" />
 
-        {/* Bell */}
         <div className="relative">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => { setShowNotifications(!showNotifications); setShowCalendar(false) }}
+            onClick={() => { 
+              if (!showNotifications) showToast('Notifications opened')
+              setShowNotifications(!showNotifications)
+              setShowCalendar(false) 
+            }}
             className={`relative h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 ${showNotifications ? 'bg-primary/10 text-primary' : ''}`}
           >
             <Bell size={17} />
@@ -141,12 +161,15 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Calendar */}
         <div className="relative">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => { setShowCalendar(!showCalendar); setShowNotifications(false) }}
+            onClick={() => { 
+              if (!showCalendar) showToast('Calendar opened')
+              setShowCalendar(!showCalendar)
+              setShowNotifications(false) 
+            }}
             className={`h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 ${showCalendar ? 'bg-primary/10 text-primary' : ''}`}
           >
             <Calendar size={17} />
@@ -177,6 +200,7 @@ const Navbar = () => {
                   {[...Array(14)].map((_, i) => (
                     <div
                       key={i}
+                      onClick={() => showToast(`Selected day ${i + 1}`)}
                       className={`py-1.5 text-[10px] rounded-lg cursor-pointer transition-colors ${i === 6
                           ? 'bg-primary text-primary-foreground font-bold'
                           : 'text-foreground hover:bg-secondary'
@@ -187,7 +211,11 @@ const Navbar = () => {
                   ))}
                 </div>
 
-                <Button variant="ghost" className="w-full mt-3 h-7 text-[10px] font-bold text-primary hover:bg-primary/5">
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-3 h-7 text-[10px] font-bold text-primary hover:bg-primary/5"
+                  onClick={() => showToast('Redirecting to full calendar...')}
+                >
                   View Full Calendar
                 </Button>
               </div>
@@ -195,11 +223,10 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Theme toggle */}
         <Button
           variant="ghost"
           size="icon"
-          onClick={toggleTheme}
+          onClick={handleToggleTheme}
           className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
         >
           {darkMode ? <Sun size={17} /> : <Moon size={17} />}

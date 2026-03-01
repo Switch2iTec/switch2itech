@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Search, HelpCircle, MessageSquare, LifeBuoy,
-  ArrowUpRight, CheckCircle2, AlertCircle, Activity
+  ArrowUpRight, CheckCircle2, AlertCircle, Activity, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
@@ -39,10 +39,41 @@ const CHANNELS = [
 ]
 
 const Support = () => {
-  return (
-    <div className="min-h-screen bg-background p-8 space-y-10 animate-in fade-in duration-400">
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
 
-      {/* Hero search header */}
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
+
+  const handleChannelClick = (title) => {
+    showToast(`Redirecting to ${title}...`)
+  }
+
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && e.target.value) {
+      showToast(`Searching for: "${e.target.value}"`)
+    }
+  }
+
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <AlertCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
+
+  return (
+    <div className="min-h-screen bg-background p-8 space-y-10 animate-in fade-in duration-400 relative">
+      <ToastUI />
+
       <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-5 py-6">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary uppercase tracking-wider">
           <LifeBuoy size={12} /> Support Center
@@ -55,16 +86,17 @@ const Support = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
           <Input
             placeholder="Search documentation, guides, FAQs..."
+            onKeyDown={handleSearch}
             className="pl-11 h-12 rounded-2xl border-border bg-card shadow-sm focus-visible:ring-primary/20 text-sm"
           />
         </div>
       </div>
 
-      {/* Support channels */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {CHANNELS.map((ch) => (
           <button
             key={ch.title}
+            onClick={() => handleChannelClick(ch.title)}
             className={`stat-card flex flex-col items-center text-center gap-4 group cursor-pointer relative overflow-hidden`}
           >
             <div className={`absolute top-0 left-0 right-0 h-0.5 ${ch.accent} opacity-40 group-hover:opacity-100 transition-opacity`} />
@@ -82,10 +114,7 @@ const Support = () => {
         ))}
       </div>
 
-      {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Recent Feedback */}
         <Card className="rounded-2xl border-border/50 bg-card">
           <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
             <div>
@@ -96,7 +125,11 @@ const Support = () => {
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-3">
             {dummyData.testimonials.slice(0, 5).map((item) => (
-              <div key={item.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-secondary/30 border border-border/40">
+              <div 
+                key={item.id} 
+                className="flex items-start gap-3 p-3.5 rounded-xl bg-secondary/30 border border-border/40 cursor-pointer hover:bg-secondary/50 transition-colors"
+                onClick={() => showToast(`Review by ${item.author} selected`)}
+              >
                 <div className="h-8 w-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0">
                   {item.author.substring(0, 2).toUpperCase()}
                 </div>
@@ -112,7 +145,6 @@ const Support = () => {
           </CardContent>
         </Card>
 
-        {/* Platform Status */}
         <Card className="rounded-2xl border-border/50 bg-card">
           <CardHeader className="px-6 pt-6 pb-4">
             <div className="flex items-center justify-between">
@@ -120,7 +152,10 @@ const Support = () => {
                 <CardTitle className="text-base font-extrabold">Platform Status</CardTitle>
                 <CardDescription className="text-xs">Live health metrics</CardDescription>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <div 
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full cursor-pointer"
+                onClick={() => showToast("Detailed status report requested")}
+              >
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">All Systems Go</span>
               </div>
@@ -128,7 +163,7 @@ const Support = () => {
           </CardHeader>
           <CardContent className="px-6 pb-6 space-y-1">
             {dummyData.analytics.slice(0, 5).map((stat) => (
-              <div key={stat.id} className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-secondary/40 transition-colors">
+              <div key={stat.id} className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-secondary/40 transition-colors cursor-help" onClick={() => showToast(`Status: ${stat.label} is nominal`)}>
                 <div className="flex items-center gap-3">
                   <div className={`h-1.5 w-1.5 rounded-full ${stat.trend === 'up' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
                   <span className="text-sm font-medium">{stat.label}</span>
@@ -140,7 +175,10 @@ const Support = () => {
               </div>
             ))}
             <div className="pt-4">
-              <Button className="w-full rounded-xl gap-2 font-bold">
+              <Button 
+                className="w-full rounded-xl gap-2 font-bold"
+                onClick={() => showToast("Connecting to Support...", "success")}
+              >
                 <LifeBuoy size={16} /> Contact Support Team
               </Button>
             </div>

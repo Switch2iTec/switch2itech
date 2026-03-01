@@ -3,7 +3,7 @@ import projectService from '../../api/projectService';
 import userService from '../../api/userService';
 import {
   Loader2, ArrowLeft, ChevronDown, ChevronRight, CheckCircle2, Clock,
-  PlayCircle, Milestone, Plus, UserPlus, Trash2, Edit3
+  PlayCircle, Milestone, Plus, UserPlus, Trash2, Edit3, Users, X
 } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -21,18 +21,24 @@ const selectClass = "w-full h-10 px-3 rounded-xl border border-input bg-backgrou
 const ProjectMonitoring = ({ project, onBack }) => {
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [expandedMilestones, setExpandedMilestones] = useState({});
   const [modulesData, setModulesData] = useState({});
   const [expandedModules, setExpandedModules] = useState({});
   const [tasksData, setTasksData] = useState({});
-
   const [allUsers, setAllUsers] = useState([]);
 
-  // Modal State for Create & Assign Actions
+  // Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Modal State
   const [modal, setModal] = useState({ open: false, type: null, milestoneId: null, moduleId: null, taskId: null, entityData: null });
   const [formData, setFormData] = useState({});
   const [formLoading, setFormLoading] = useState(false);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
 
   useEffect(() => {
     if (project?._id) {
@@ -56,7 +62,7 @@ const ProjectMonitoring = ({ project, onBack }) => {
       const res = await projectService.getMilestones(project._id);
       setMilestones(res.data?.data || []);
     } catch (err) {
-      console.error("Failed to fetch milestones:", err);
+      showToast("Failed to fetch milestones", "error");
     } finally {
       setLoading(false);
     }
@@ -67,7 +73,7 @@ const ProjectMonitoring = ({ project, onBack }) => {
       const res = await projectService.getModules(project._id, milestoneId);
       setModulesData(prev => ({ ...prev, [milestoneId]: res.data?.data || [] }));
     } catch (err) {
-      console.error("Failed to fetch modules:", err);
+      showToast("Error retrieving modules", "error");
     }
   };
 
@@ -76,7 +82,7 @@ const ProjectMonitoring = ({ project, onBack }) => {
       const res = await projectService.getTasks(project._id, milestoneId, moduleId);
       setTasksData(prev => ({ ...prev, [moduleId]: res.data?.data || [] }));
     } catch (err) {
-      console.error("Failed to fetch tasks:", err);
+      showToast("Error retrieving tasks", "error");
     }
   };
 
@@ -96,12 +102,11 @@ const ProjectMonitoring = ({ project, onBack }) => {
     }
   };
 
-  // --- CRUD Handlers ---
-
   const openModal = (type, ids = {}, defaultData = {}) => {
     setModal({ open: true, type, ...ids, entityData: defaultData });
     setFormData(defaultData);
   };
+
   const closeModal = () => setModal({ open: false, type: null });
 
   const handleFormSubmit = async (e) => {
@@ -114,40 +119,47 @@ const ProjectMonitoring = ({ project, onBack }) => {
       if (type === 'addMilestone') {
         await projectService.createMilestone(pId, formData);
         await fetchMilestones();
+        showToast("Milestone architected successfully");
       }
       else if (type === 'addModule') {
         await projectService.createModule(pId, milestoneId, formData);
         await fetchModules(milestoneId);
+        showToast("Module provisioned successfully");
       }
       else if (type === 'addTask') {
         await projectService.createTask(pId, milestoneId, moduleId, formData);
         await fetchTasks(milestoneId, moduleId);
+        showToast("Task logic defined successfully");
       }
       else if (type === 'assignModule') {
         await projectService.assignModule(pId, milestoneId, moduleId, { assignedTo: formData.assignedTo });
         await fetchModules(milestoneId);
+        showToast("Module ownership assigned");
       }
       else if (type === 'assignTask') {
         await projectService.assignTask(pId, milestoneId, moduleId, taskId, { assignedTo: formData.assignedTo });
         await fetchTasks(milestoneId, moduleId);
+        showToast("Task assigned to resource");
       }
       else if (type === 'editMilestone') {
         await projectService.updateMilestone(pId, milestoneId, formData);
         await fetchMilestones();
+        showToast("Milestone parameters updated");
       }
       else if (type === 'editModule') {
         await projectService.updateModule(pId, milestoneId, moduleId, formData);
         await fetchModules(milestoneId);
+        showToast("Module configurations updated");
       }
       else if (type === 'editTask') {
         await projectService.updateTask(pId, milestoneId, moduleId, taskId, formData);
         await fetchTasks(milestoneId, moduleId);
+        showToast("Task execution details updated");
       }
 
       closeModal();
     } catch (err) {
-      console.error(`Action failed:`, err);
-      alert(err.response?.data?.message || "Operation failed");
+      showToast(err.response?.data?.message || "Operational failure", "error");
     } finally {
       setFormLoading(false);
     }
@@ -167,8 +179,9 @@ const ProjectMonitoring = ({ project, onBack }) => {
         await projectService.deleteTask(pId, ids.milestoneId, ids.moduleId, ids.taskId);
         await fetchTasks(ids.milestoneId, ids.moduleId);
       }
+      showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} purged from hierarchy`);
     } catch (err) {
-      console.error("Delete failed", err);
+      showToast(`Decommissioning failed: ${err.message}`, "error");
     }
   };
 
@@ -181,7 +194,17 @@ const ProjectMonitoring = ({ project, onBack }) => {
 
   const teamMembers = allUsers.filter(u => project.teamMembers?.some(tm => (typeof tm === 'object' ? tm._id : tm) === u._id) || u.role === 'developer');
 
-  // --- Render Modals ---
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <X size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+      </div>
+    )
+  );
+
   const renderModalContent = () => {
     if (!modal.open || !modal.type) return null;
     const isAdding = modal.type.startsWith('add');
@@ -230,7 +253,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
                 </select>
               </div>
             )}
-
             {(entityName === 'Module' || entityName === 'Task') && (
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -265,16 +287,15 @@ const ProjectMonitoring = ({ project, onBack }) => {
   if (!project) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
+      <ToastUI />
 
-      {/* Dialog for Forms */}
       <Dialog open={modal.open} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           {renderModalContent()}
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border/40 pb-6 gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -293,7 +314,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="dashboard-glass rounded-2xl p-6 min-h-[400px]">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
@@ -311,8 +331,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
           <div className="space-y-5">
             {milestones.map(m => (
               <div key={m._id} className="border border-border/60 rounded-xl bg-card shadow-sm overflow-hidden transition-all duration-300">
-
-                {/* Milestone Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 cursor-pointer hover:bg-secondary/20 transition-colors gap-3 border-b border-border/30">
                   <div className="flex items-center gap-3" onClick={() => toggleMilestone(m._id)}>
                     <button className="text-muted-foreground hover:text-foreground">
@@ -341,7 +359,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
                   </div>
                 </div>
 
-                {/* Modules Area */}
                 {expandedMilestones[m._id] && (
                   <div className="bg-background/40 p-4 pl-[3.25rem] space-y-3">
                     {!modulesData[m._id] ? (
@@ -351,8 +368,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
                     ) : (
                       modulesData[m._id].map(mod => (
                         <div key={mod._id} className="border border-border/50 rounded-xl bg-card overflow-hidden shadow-sm">
-
-                          {/* Module Header */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 cursor-pointer hover:bg-secondary/40 transition-colors gap-3 border-b border-border/30">
                             <div className="flex items-center gap-3" onClick={() => toggleModule(m._id, mod._id)}>
                               {expandedModules[mod._id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -379,7 +394,6 @@ const ProjectMonitoring = ({ project, onBack }) => {
                             </div>
                           </div>
 
-                          {/* Tasks Area */}
                           {expandedModules[mod._id] && (
                             <div className="p-3 pl-11 space-y-2.5 bg-secondary/10 shadow-inner">
                               {!tasksData[mod._id] ? (

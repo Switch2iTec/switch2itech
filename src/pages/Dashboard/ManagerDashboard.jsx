@@ -6,6 +6,7 @@ import {
     UserPlus, X, Search, ExternalLink, Zap, TrendingUp, CalendarDays,
     LayoutGrid, Sparkles,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -43,7 +44,6 @@ const progressGradient = (p) => {
     return 'from-amber-400 to-orange-500';
 };
 
-/* ── Metric Card ─────────────────────────────────────────────────── */
 const MetricCard = ({ icon: Icon, label, value, gradient, ring, badge, bg }) => (
     <div className={`metric-card ring-1 ${ring}`}>
         <div className={`inline-flex p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md mb-4`}>
@@ -57,7 +57,6 @@ const MetricCard = ({ icon: Icon, label, value, gradient, ring, badge, bg }) => 
     </div>
 );
 
-/* ── Main Component ──────────────────────────────────────────────── */
 const ManagerDashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -72,7 +71,7 @@ const ManagerDashboard = () => {
     const [assignDialog, setAssignDialog] = useState({ open: false, project: null });
     const [assignments, setAssignments] = useState({ manager: '', teamMembers: [], clients: [] });
     const [addMilestoneDialog, setAddMilestoneDialog] = useState({ open: false, project: null });
-    const [milestoneForm, setMilestoneForm] = useState({ title: '', description: '', dueDate: '', status: 'pending' });
+    const [milestoneForm, setMilestoneForm] = useState({ title: '', description: '', deadline: '', status: 'pending' });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -89,6 +88,7 @@ const ManagerDashboard = () => {
                 setAllUsers(userRes.data?.data || []);
             } catch (err) {
                 console.error('Manager dashboard fetch error:', err);
+                toast.error('Failed to load dashboard data');
             } finally {
                 setLoading(false);
             }
@@ -103,6 +103,7 @@ const ManagerDashboard = () => {
             setMilestones(prev => ({ ...prev, [projectId]: res.data?.data || [] }));
         } catch {
             setMilestones(prev => ({ ...prev, [projectId]: [] }));
+            toast.error('Failed to load milestones');
         }
     };
 
@@ -113,11 +114,20 @@ const ManagerDashboard = () => {
     };
 
     const handleAssignSave = async () => {
-        try {
-            await projectService.assignProject(assignDialog.project._id, assignments);
-            setProjects(prev => prev.map(p => p._id === assignDialog.project._id ? { ...p, ...assignments } : p));
-            setAssignDialog({ open: false, project: null });
-        } catch (err) { console.error('Assignment failed:', err); }
+        const promise = projectService.assignProject(assignDialog.project._id, assignments);
+
+        toast.promise(promise, {
+            loading: 'Updating assignments...',
+            success: () => {
+                setProjects(prev => prev.map(p => p._id === assignDialog.project._id ? { ...p, ...assignments } : p));
+                setAssignDialog({ open: false, project: null });
+                return 'Team updated successfully';
+            },
+            error: (err) => {
+                console.error('Assignment failed:', err);
+                return 'Failed to update assignments';
+            }
+        });
     };
 
     const openAssignDialog = (project) => {
@@ -130,13 +140,27 @@ const ManagerDashboard = () => {
     };
 
     const handleAddMilestone = async () => {
-        try {
-            await projectService.createMilestone(addMilestoneDialog.project._id, milestoneForm);
-            delete milestones[addMilestoneDialog.project._id];
-            await loadMilestones(addMilestoneDialog.project._id);
-            setAddMilestoneDialog({ open: false, project: null });
-            setMilestoneForm({ title: '', description: '', deadline: '', status: 'pending' });
-        } catch (err) { console.error('Add milestone failed:', err); }
+        const promise = projectService.createMilestone(addMilestoneDialog.project._id, milestoneForm);
+
+        toast.promise(promise, {
+            loading: 'Creating milestone...',
+            success: async () => {
+                const projectId = addMilestoneDialog.project._id;
+                setMilestones(prev => {
+                    const next = { ...prev };
+                    delete next[projectId];
+                    return next;
+                });
+                await loadMilestones(projectId);
+                setAddMilestoneDialog({ open: false, project: null });
+                setMilestoneForm({ title: '', description: '', deadline: '', status: 'pending' });
+                return 'Milestone created';
+            },
+            error: (err) => {
+                console.error('Add milestone failed:', err);
+                return 'Failed to create milestone';
+            }
+        });
     };
 
     const active = projects.filter(p => ['active', 'in-progress'].includes(p.status?.toLowerCase())).length;
@@ -164,7 +188,6 @@ const ManagerDashboard = () => {
     return (
         <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
 
-            {/* ── Hero Header ────────────────────────────────────────────── */}
             <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-transparent to-blue-500/5 pointer-events-none" />
                 <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -172,8 +195,7 @@ const ManagerDashboard = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-bold">
-                                <Sparkles size={10} />
-                                Manager Workspace
+                                <span className="flex items-center gap-1.5"><Sparkles size={10} /> Manager Workspace</span>
                             </div>
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight gradient-text">
@@ -192,7 +214,6 @@ const ManagerDashboard = () => {
                 </div>
             </div>
 
-            {/* ── Metric Cards ────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard icon={Briefcase} label="Total Projects" value={projects.length}
                     gradient="from-blue-500 to-blue-600" ring="ring-blue-500/20"
@@ -208,7 +229,6 @@ const ManagerDashboard = () => {
                     badge="bg-orange-500/10 text-orange-600" />
             </div>
 
-            {/* ── Project List ─────────────────────────────────────────────── */}
             <div className="space-y-5">
                 <div className="flex items-center justify-between gap-4">
                     <h2 className="text-base font-extrabold tracking-tight flex items-center gap-2">
@@ -249,11 +269,9 @@ const ManagerDashboard = () => {
 
                         return (
                             <div key={project._id} className="dashboard-glass overflow-hidden group">
-                                {/* Left accent border by status */}
                                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${statusDot(project.status).includes('blue') ? 'bg-blue-500' : statusDot(project.status).includes('emerald') ? 'bg-emerald-500' : statusDot(project.status).includes('violet') ? 'bg-violet-500' : 'bg-amber-400'} rounded-l-2xl opacity-70`} />
 
                                 <div className="flex flex-col md:flex-row md:items-center gap-4 p-5 pl-6">
-                                    {/* Thumbnail */}
                                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-violet-500/20 border border-border/30 flex-shrink-0">
                                         <img
                                             src={project.coverImage || `https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=400`}
@@ -262,7 +280,6 @@ const ManagerDashboard = () => {
                                         />
                                     </div>
 
-                                    {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="font-extrabold text-sm group-hover:text-primary transition-colors">{project.title || project.name}</h3>
@@ -270,7 +287,6 @@ const ManagerDashboard = () => {
                                         </div>
                                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{project.description || 'No description.'}</p>
 
-                                        {/* Progress */}
                                         <div className="mt-2.5 space-y-1">
                                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
                                                 <span>Progress</span>
@@ -285,7 +301,6 @@ const ManagerDashboard = () => {
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
                                         <Button variant="outline" size="sm" className="gap-1 h-8 text-xs rounded-xl border-border/50 hover:border-primary/40" onClick={() => openAssignDialog(project)}>
                                             <UserPlus size={12} /> Assign
@@ -305,7 +320,6 @@ const ManagerDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* ── Expanded milestones ────────────────── */}
                                 {isExpanded && (
                                     <div className="border-t border-border/30 bg-muted/20 px-6 py-4 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 mb-3">
@@ -341,7 +355,6 @@ const ManagerDashboard = () => {
                 </div>
             </div>
 
-            {/* ── Assign Dialog ─────────────────────────────────────────── */}
             <Dialog open={assignDialog.open} onOpenChange={open => setAssignDialog(prev => ({ ...prev, open }))}>
                 <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>
@@ -423,7 +436,6 @@ const ManagerDashboard = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* ── Add Milestone Dialog ───────────────────────────────────── */}
             <Dialog open={addMilestoneDialog.open} onOpenChange={open => setAddMilestoneDialog(prev => ({ ...prev, open }))}>
                 <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>

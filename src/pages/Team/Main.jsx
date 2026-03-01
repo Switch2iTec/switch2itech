@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   Search, Pencil, Trash2, Mail,
-  Filter, UserCheck, Shield, Code2, Briefcase
+  Filter, UserCheck, Shield, Code2, Briefcase, CheckCircle2, XCircle, X
 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
@@ -34,6 +34,12 @@ const MEMBERS = [
 
 const Main = () => {
   const [search, setSearch] = useState('')
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   const filtered = MEMBERS.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -41,9 +47,32 @@ const Main = () => {
     m.team.toLowerCase().includes(search.toLowerCase())
   )
 
+  const handleAction = (type, name) => {
+    const messages = {
+      edit: `Opening editor for ${name}`,
+      delete: `Requesting deletion for ${name}`,
+      filter: "Opening advanced filters"
+    }
+    showToast(messages[type], type === 'delete' ? 'error' : 'success')
+  }
+
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
+
   return (
-    <Card className="overflow-hidden border-border/50">
-      {/* Header */}
+    <Card className="overflow-hidden border-border/50 relative">
+      <ToastUI />
       <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 pt-6 pb-5 border-b border-border/40">
         <div>
           <h2 className="text-base font-extrabold tracking-tight">All Members</h2>
@@ -56,10 +85,13 @@ const Main = () => {
               placeholder="Search name, role, team…"
               className="pl-10 h-9 rounded-xl text-sm"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => {
+                setSearch(e.target.value)
+                if (e.target.value === "") showToast("Search cleared")
+              }}
             />
           </div>
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl shrink-0">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl shrink-0" onClick={() => handleAction('filter')}>
             <Filter size={14} />
           </Button>
         </div>
@@ -115,10 +147,20 @@ const Main = () => {
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                          onClick={() => handleAction('edit', member.name)}
+                        >
                           <Pencil size={13} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-500/10 hover:text-red-500">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg hover:bg-red-500/10 hover:text-red-500"
+                          onClick={() => handleAction('delete', member.name)}
+                        >
                           <Trash2 size={13} />
                         </Button>
                       </div>
@@ -130,14 +172,13 @@ const Main = () => {
           </table>
         </div>
 
-        {/* Pagination footer */}
         <div className="px-6 py-4 border-t border-border/40 bg-secondary/10 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Showing {filtered.length} of {MEMBERS.length} members
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg">Previous</Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg">Next</Button>
+            <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg" onClick={() => showToast("Previous page requested")}>Previous</Button>
+            <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg" onClick={() => showToast("Next page requested")}>Next</Button>
           </div>
         </div>
       </CardContent>

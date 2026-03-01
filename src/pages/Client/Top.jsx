@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from "react"
 import userService from "../../api/userService"
 import projectService from "../../api/projectService"
-import { Search, Star, StarHalf, Users, Briefcase, Loader2 } from "lucide-react"
+import { Search, Star, StarHalf, Users, Briefcase, Loader2, CheckCircle2, XCircle, X } from "lucide-react"
 import { Input } from "../../components/ui/input"
 
 const Top = ({ onSearch }) => {
   const [counts, setCounts] = useState({ clients: 0, projects: 0 })
   const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true)
         const [userRes, projectRes] = await Promise.all([
           userService.getUsers(),
           projectService.getAllProjects()
@@ -20,9 +27,11 @@ const Top = ({ onSearch }) => {
             clients: userRes.data.data.filter(u => u.role === "client").length,
             projects: projectRes.data.data.filter(p => p.status === "active").length,
           })
+          showToast("Global metrics updated")
         }
       } catch (err) {
         console.error("Error fetching client stats:", err)
+        showToast("Metric synchronization failed", "error")
       } finally {
         setLoading(false)
       }
@@ -30,14 +39,36 @@ const Top = ({ onSearch }) => {
     fetchStats()
   }, [])
 
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    if (onSearch) onSearch(value)
+    if (value === "") showToast("Filters reset")
+  }
+
   const stats = [
     { label: "Total Clients", value: loading ? "···" : counts.clients, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: "Active Projects", value: loading ? "···" : counts.projects, icon: Briefcase, color: "text-emerald-500", bg: "bg-emerald-500/10" },
     { label: "Client Satisfaction", value: "4.8", icon: Star, color: "text-amber-500", bg: "bg-amber-500/10", isRating: true },
   ]
 
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-primary" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      <ToastUI />
+      
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {stats.map((s, i) => (
@@ -67,7 +98,7 @@ const Top = ({ onSearch }) => {
         <Input
           type="text"
           placeholder="Search by name, company or email…"
-          onChange={(e) => onSearch && onSearch(e.target.value)}
+          onChange={handleSearchChange}
           className="pl-11 rounded-2xl h-12"
         />
       </div>

@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/ContextProvider';
 import projectService from '../../api/projectService';
+import { toast } from 'sonner';
 
 const statusBadge = (status) => {
     const map = {
@@ -42,7 +43,6 @@ const progressGradient = (p) => {
     return 'from-amber-400 to-orange-500';
 };
 
-/* ── Metric Card ─────────────────────────────────────────────────── */
 const MetricCard = ({ icon: Icon, label, value, gradient, ring, badge }) => (
     <div className={`metric-card ring-1 ${ring}`}>
         <div className={`inline-flex p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md mb-4`}>
@@ -56,7 +56,6 @@ const MetricCard = ({ icon: Icon, label, value, gradient, ring, badge }) => (
     </div>
 );
 
-/* ── Main ────────────────────────────────────────────────────────── */
 const DeveloperDashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -78,6 +77,7 @@ const DeveloperDashboard = () => {
                 setProjects(mine);
             } catch (err) {
                 console.error('Developer dashboard fetch error:', err);
+                toast.error("Failed to load your project workspace.");
             } finally {
                 setLoading(false);
             }
@@ -87,7 +87,8 @@ const DeveloperDashboard = () => {
 
     const loadProjectDetails = async (projectId) => {
         if (milestonesMap[projectId]) return;
-        try {
+        
+        const promise = async () => {
             const msRes = await projectService.getMilestones(projectId);
             const msList = msRes.data?.data || [];
             setMilestonesMap(prev => ({ ...prev, [projectId]: msList }));
@@ -108,13 +109,21 @@ const DeveloperDashboard = () => {
                 } catch { /* ignore */ }
             }
             setTasksMap(prev => ({ ...prev, [projectId]: collected }));
-        } catch {
-            setMilestonesMap(prev => ({ ...prev, [projectId]: [] }));
-        }
+            return collected;
+        };
+
+        toast.promise(promise(), {
+            loading: 'Fetching project breakdown...',
+            success: (data) => `Loaded ${data.length} assigned tasks.`,
+            error: 'Could not sync project details.',
+        });
     };
 
     const toggleProject = (id) => {
-        if (expandedProject === id) { setExpandedProject(null); return; }
+        if (expandedProject === id) { 
+            setExpandedProject(null); 
+            return; 
+        }
         setExpandedProject(id);
         loadProjectDetails(id);
     };
@@ -145,7 +154,6 @@ const DeveloperDashboard = () => {
     return (
         <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
 
-            {/* ── Hero Header ────────────────────────────────────────────── */}
             <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/8 via-transparent to-blue-500/5 pointer-events-none" />
                 <div className="absolute -top-16 -right-16 w-64 h-64 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -165,7 +173,6 @@ const DeveloperDashboard = () => {
                         </p>
                     </div>
 
-                    {/* Task completion ring */}
                     {allTasks.length > 0 && (
                         <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-violet-500/5 border border-violet-500/15">
                             <div className="relative w-14 h-14">
@@ -189,7 +196,6 @@ const DeveloperDashboard = () => {
                 </div>
             </div>
 
-            {/* ── Metric Cards ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard icon={Briefcase} label="Assigned Projects" value={projects.length}
                     gradient="from-blue-500 to-blue-600" ring="ring-blue-500/20"
@@ -205,7 +211,6 @@ const DeveloperDashboard = () => {
                     badge="bg-orange-500/10 text-orange-600" />
             </div>
 
-            {/* ── Projects ─────────────────────────────────────────────────── */}
             <div className="space-y-5">
                 <h2 className="text-base font-extrabold tracking-tight flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-violet-500/10">
@@ -234,11 +239,9 @@ const DeveloperDashboard = () => {
 
                         return (
                             <div key={project._id} className="dashboard-glass overflow-hidden group">
-                                {/* Left accent */}
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-blue-500 rounded-l-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
 
                                 <div className="flex flex-col md:flex-row md:items-center gap-4 p-5 pl-6">
-                                    {/* Thumbnail */}
                                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-border/30 flex-shrink-0">
                                         <img
                                             src={project.coverImage || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=400'}
@@ -247,7 +250,6 @@ const DeveloperDashboard = () => {
                                         />
                                     </div>
 
-                                    {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="font-extrabold text-sm group-hover:text-primary transition-colors">{project.title || project.name}</h3>
@@ -268,7 +270,6 @@ const DeveloperDashboard = () => {
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
                                         <Button size="sm" className="gap-1 h-8 text-xs rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 border-0 shadow-sm shadow-violet-500/20" onClick={() => navigate(`/projects/${project._id}`)}>
                                             <ExternalLink size={12} /> Open
@@ -283,11 +284,8 @@ const DeveloperDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* ── Expanded ────────────────────────────── */}
                                 {isExpanded && (
                                     <div className="border-t border-border/30 bg-muted/20 px-6 py-5 space-y-5 animate-in fade-in slide-in-from-top-1 duration-200">
-
-                                        {/* Milestones */}
                                         <div className="space-y-2">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                                                 <Milestone size={11} className="text-emerald-600" /> Milestones ({msList.length})
@@ -314,7 +312,6 @@ const DeveloperDashboard = () => {
                                             )}
                                         </div>
 
-                                        {/* My Tasks */}
                                         <div className="space-y-2">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                                                 <ListTodo size={11} className="text-violet-600" /> My Tasks ({myTasks.length})

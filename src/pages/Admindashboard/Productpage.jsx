@@ -4,7 +4,7 @@ import {
   Package, Users, Edit3, Trash2, Plus,
   Search, Filter, MoreVertical, AlertCircle,
   Loader2, History, ArrowLeft, BarChart3, ChevronRight,
-  TrendingUp, Box, Eye, LayoutGrid, List
+  TrendingUp, Box, Eye, LayoutGrid, List, CheckCircle2
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -20,6 +20,12 @@ const Productpage = () => {
   const [currentView, setCurrentView] = useState("list");
   const [layoutStyle, setLayoutStyle] = useState("list");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '' });
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -30,9 +36,11 @@ const Productpage = () => {
       setLoading(true);
       const res = await productService.getAllProducts();
       setProducts(res.data?.data || []);
+      showToast("Catalog synced successfully");
     } catch (err) {
       console.error("Failed to fetch products:", err);
       setProducts([]);
+      showToast("Failed to refresh catalog");
     } finally {
       setLoading(false);
     }
@@ -43,11 +51,19 @@ const Productpage = () => {
       try {
         await productService.deleteProduct(id);
         setProducts(products.filter(p => p._id !== id));
+        showToast("Product successfully decommissioned");
       } catch (err) {
         console.error("Failed to delete product:", err);
-        alert("Failed to delete product.");
+        showToast("Action failed: Product deletion error");
       }
     }
+  };
+
+  const handleViewChange = (view, product = null) => {
+    setSelectedProduct(product);
+    setCurrentView(view);
+    const viewLabels = { add: "Product Creator", edit: "Editor Mode", view: "Technical Specs", list: "Catalog List" };
+    showToast(`Switched to ${viewLabels[view]}`);
   };
 
   const inventoryValue = products.reduce((acc, p) => acc + (p.price || 0) * (p.stock || 0), 0);
@@ -66,21 +82,31 @@ const Productpage = () => {
     return matchesSearch && matchesTab;
   });
 
+  const ToastUI = () => (
+    toast.show && (
+      <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <CheckCircle2 size={18} className="text-primary" />
+        <span className="text-sm font-medium text-foreground">{toast.message}</span>
+      </div>
+    )
+  );
+
   if (currentView === "add" || currentView === "edit") {
     return (
       <div className="min-h-screen bg-background p-6 lg:p-10 space-y-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <ToastUI />
         <div className="flex items-center justify-between border-b pb-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight">{currentView === "edit" ? "Edit Asset" : "Create Asset"}</h1>
             <p className="text-muted-foreground">{currentView === "edit" ? "Modify catalog item properties." : "Provision a new product entry to the catalog ecosystem."}</p>
           </div>
-          <Button variant="outline" onClick={() => { setCurrentView("list"); setSelectedProduct(null); fetchProducts(); }} className="gap-2 rounded-xl">
+          <Button variant="outline" onClick={() => handleViewChange("list")} className="gap-2 rounded-xl">
             <ArrowLeft size={16} /> Cancel & Return
           </Button>
         </div>
         <Addproduct
           initialData={currentView === "edit" ? selectedProduct : null}
-          onSuccess={() => { setCurrentView("list"); setSelectedProduct(null); fetchProducts(); }}
+          onSuccess={() => { showToast("Catalog updated successfully"); handleViewChange("list"); fetchProducts(); }}
         />
       </div>
     );
@@ -89,17 +115,19 @@ const Productpage = () => {
   if (currentView === "view" && selectedProduct) {
     return (
       <div className="min-h-screen bg-background w-full">
+        <ToastUI />
         <Main
           product={selectedProduct}
-          onBack={() => { setCurrentView("list"); setSelectedProduct(null); }}
+          onBack={() => handleViewChange("list")}
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
-
+    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400 relative">
+      <ToastUI />
+      
       {/* Hero Header */}
       <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-primary/5 pointer-events-none" />
@@ -118,7 +146,7 @@ const Productpage = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button onClick={() => setCurrentView("add")} className="h-11 px-8 rounded-xl font-bold gap-2 shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 to-primary hover:from-primary hover:to-indigo-600 border-0 transition-all">
+            <Button onClick={() => handleViewChange("add")} className="h-11 px-8 rounded-xl font-bold gap-2 shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 to-primary hover:from-primary hover:to-indigo-600 border-0 transition-all">
               <Plus size={18} /> Create Product
             </Button>
           </div>
@@ -150,9 +178,8 @@ const Productpage = () => {
             {["All", "Web Apps", "Mobile Apps", "APIs"].map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  }`}
+                onClick={() => { setActiveTab(tab); showToast(`Filtering by ${tab}`); }}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {tab}
               </button>
@@ -162,14 +189,14 @@ const Productpage = () => {
           <div className="flex items-center gap-3">
             <div className="flex bg-secondary/30 p-1 rounded-xl border border-border/40">
               <button
-                onClick={() => setLayoutStyle("list")}
+                onClick={() => { setLayoutStyle("list"); showToast("List View enabled"); }}
                 className={`p-1.5 rounded-lg transition-all ${layoutStyle === "list" ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 title="List View"
               >
                 <List size={16} />
               </button>
               <button
-                onClick={() => setLayoutStyle("grid")}
+                onClick={() => { setLayoutStyle("grid"); showToast("Grid View enabled"); }}
                 className={`p-1.5 rounded-lg transition-all ${layoutStyle === "grid" ? "bg-background shadow text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 title="Grid View"
               >
@@ -185,8 +212,8 @@ const Productpage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-background"><Filter size={16} /></Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-background"><History size={16} /></Button>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-background" onClick={() => showToast("Filters accessed")}><Filter size={16} /></Button>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-background" onClick={() => showToast("Loading audit history...")}><History size={16} /></Button>
           </div>
         </div>
 
@@ -260,10 +287,10 @@ const Productpage = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10 rounded-lg" onClick={() => { setSelectedProduct(product); setCurrentView('view'); }} title="View Product">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10 rounded-lg" onClick={() => handleViewChange('view', product)} title="View Product">
                             <Eye size={14} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-500/10 rounded-lg" onClick={() => { setSelectedProduct(product); setCurrentView('edit'); }} title="Edit Product">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-500/10 rounded-lg" onClick={() => handleViewChange('edit', product)} title="Edit Product">
                             <Edit3 size={14} />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-500/10 rounded-lg" onClick={() => handleDelete(product._id)}>
@@ -323,11 +350,11 @@ const Productpage = () => {
                       <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap">{(product.stock || 0)} Units</span>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                      <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/10 rounded-lg px-2" onClick={() => { setSelectedProduct(product); setCurrentView('view'); }}>
+                      <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-primary hover:bg-primary/10 rounded-lg px-2" onClick={() => handleViewChange('view', product)}>
                         <Eye size={13} /> View
                       </Button>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-500/10 rounded-lg" onClick={() => { setSelectedProduct(product); setCurrentView('edit'); }}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-500/10 rounded-lg" onClick={() => handleViewChange('edit', product)}>
                           <Edit3 size={13} />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-500/10 rounded-lg" onClick={() => handleDelete(product._id)}>

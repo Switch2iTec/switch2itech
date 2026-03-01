@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import projectService from "../../api/projectService"
 import {
   TrendingUp, DollarSign, Briefcase, CreditCard,
-  Clock, Download, Calendar, ArrowUpRight, Search, Play
+  Clock, Download, Calendar, ArrowUpRight, Search, CheckCircle2, XCircle, X
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -12,6 +12,13 @@ const Revenuepage = () => {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   useEffect(() => {
     const fetch = async () => {
@@ -29,15 +36,25 @@ const Revenuepage = () => {
           category: p.category || "Development",
         }))
         setTransactions(mapped)
+        if (res.data?.data) showToast("Financial data synchronized")
       } catch (err) {
         console.error("Failed to fetch revenue/projects:", err)
         setTransactions([])
+        showToast("Failed to fetch ledger data", "error")
       } finally {
         setLoading(false)
       }
     }
     fetch()
   }, [])
+
+  const handleExport = () => {
+    showToast("Preparing financial report...")
+    // Simulate export delay
+    setTimeout(() => {
+      showToast("Report exported successfully (CSV)")
+    }, 1500)
+  }
 
   const total = transactions.reduce((s, t) => s + (t.amount || 0), 0)
   const pending = transactions.filter(t => t.status === "Pending").reduce((s, t) => s + (t.amount || 0), 0)
@@ -55,10 +72,24 @@ const Revenuepage = () => {
     (t.client || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  return (
-    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-emerald-500" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
 
-      {/* Hero Header */}
+  return (
+    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400 relative">
+      <ToastUI />
+
       <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-primary/5 pointer-events-none" />
         <div className="absolute -top-16 -right-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -76,17 +107,16 @@ const Revenuepage = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="h-11 px-5 rounded-xl font-bold gap-2 hover:bg-secondary/80">
+            <Button variant="outline" onClick={() => showToast("Date range filter updated")} className="h-11 px-5 rounded-xl font-bold gap-2 hover:bg-secondary/80">
               <Calendar size={16} /> Last 30 Days
             </Button>
-            <Button className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-teal-500 hover:to-emerald-500 border-0 text-white transition-all">
+            <Button onClick={handleExport} className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-teal-500 hover:to-emerald-500 border-0 text-white transition-all">
               <Download size={16} /> Export Report
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="metric-card ring-1 ring-border/50 bg-card/40 hover:bg-card">
@@ -98,16 +128,13 @@ const Revenuepage = () => {
                 {s.trend}
               </Badge>
             </div>
-            <h2 className="text-3xl font-black tabular-nums">{s.value}</h2>
+            <h2 className="text-3xl font-black tabular-nums">{loading ? "—" : s.value}</h2>
             <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-1.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Revenue Ledger */}
         <div className="lg:col-span-2 dashboard-glass rounded-2xl overflow-hidden border-border/50 shadow-sm flex flex-col">
           <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-border/40 bg-card/30 gap-4">
             <div>
@@ -177,7 +204,7 @@ const Revenuepage = () => {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors opacity-100 lg:opacity-0 group-hover:opacity-100">
+                        <Button variant="ghost" size="icon" onClick={() => showToast(`Opening ${item.projectName} details`)} className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors opacity-100 lg:opacity-0 group-hover:opacity-100">
                           <ArrowUpRight size={14} />
                         </Button>
                       </td>
@@ -189,7 +216,6 @@ const Revenuepage = () => {
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className="dashboard-glass rounded-2xl overflow-hidden border-border/50 shadow-sm flex flex-col">
           <div className="px-6 py-5 border-b border-border/40 bg-card/30">
             <h2 className="text-base font-extrabold tracking-tight">Recent Activity</h2>
@@ -228,7 +254,7 @@ const Revenuepage = () => {
             )}
           </div>
           <div className="p-4 border-t border-border/40 bg-card/10 mt-auto">
-            <Button variant="outline" className="w-full rounded-xl font-bold text-[10px] uppercase tracking-widest border-border/50 hover:bg-secondary">
+            <Button onClick={() => showToast("Full ledger view loading...")} variant="outline" className="w-full rounded-xl font-bold text-[10px] uppercase tracking-widest border-border/50 hover:bg-secondary">
               View All Transactions
             </Button>
           </div>

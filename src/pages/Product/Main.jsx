@@ -10,6 +10,9 @@ import {
   Lock,
   Plus,
   ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  X
 } from "lucide-react";
 import { ProductGallery } from "./ProductGallery";
 import { FeatureCard } from "./FeatureCard";
@@ -19,8 +22,41 @@ import { ReviewForm } from "./ReviewForm";
 export default function App({ product, onBack }) {
   const [quantity, setQuantity] = useState(1);
   const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // --- MAPPING SCHEMA DATA ---
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  const handleBack = () => {
+    showToast("Returning to catalog...");
+    setTimeout(onBack, 500);
+  };
+
+  const handleBuy = () => {
+    showToast(`Processing ${quantity} license(s) for ${product.name}...`, "success");
+  };
+
+  const handleQuantityChange = (val) => {
+    setQuantity(Number(val));
+    showToast(`License count updated to ${val}`);
+  };
+
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-white border-gray-200 text-gray-900'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-blue-600" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  );
+
   const productImages =
     product.image?.length > 0
       ? product.image
@@ -82,14 +118,14 @@ export default function App({ product, onBack }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 border-2 border-black">
-      {/* Header with Back Button */}
+    <div className="min-h-screen bg-gray-50 border-2 border-black relative">
+      <ToastUI />
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={onBack}
+                onClick={handleBack}
                 className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -100,13 +136,13 @@ export default function App({ product, onBack }) {
               </h1>
             </div>
             <nav className="hidden md:flex gap-6">
-              <a href="#" className="text-gray-600 hover:text-gray-900">
+              <a href="#" onClick={() => showToast("Navigating to Products...")} className="text-gray-600 hover:text-gray-900">
                 Products
               </a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">
+              <a href="#" onClick={() => showToast("Opening Support Portal...")} className="text-gray-600 hover:text-gray-900">
                 Support
               </a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">
+              <a href="#" onClick={() => showToast("Accessing Account...")} className="text-gray-600 hover:text-gray-900">
                 Account
               </a>
             </nav>
@@ -115,7 +151,6 @@ export default function App({ product, onBack }) {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-12">
-        {/* Product Overview Section */}
         <div className="mb-16 grid gap-12 lg:grid-cols-2">
           <div>
             <ProductGallery images={productImages} />
@@ -126,7 +161,7 @@ export default function App({ product, onBack }) {
               <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700 font-medium">
                 {product.category}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 cursor-help" onClick={() => showToast("Average rating based on 124 verified reviews")}>
                 <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                 <span>4.9</span>
                 <span className="text-gray-600">(Verified Asset)</span>
@@ -172,7 +207,7 @@ export default function App({ product, onBack }) {
                 <select
                   id="quantity"
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
                   className="rounded-lg border border-gray-300 px-4 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={1}>1 License - $199</option>
@@ -181,7 +216,10 @@ export default function App({ product, onBack }) {
                 </select>
               </div>
 
-              <button className="w-full md:w-2/3 rounded-lg bg-blue-600 px-6 py-4 text-white font-bold transition-all hover:bg-blue-700 shadow-lg active:scale-95">
+              <button 
+                onClick={handleBuy}
+                className="w-full md:w-2/3 rounded-lg bg-blue-600 px-6 py-4 text-white font-bold transition-all hover:bg-blue-700 shadow-lg active:scale-95"
+              >
                 Buy {product.name} Now
               </button>
             </div>
@@ -195,7 +233,6 @@ export default function App({ product, onBack }) {
           </div>
         </div>
 
-        {/* Features Section */}
         <section className="mb-16">
           <div className="mb-8 text-center">
             <h2 className="mb-3 text-3xl font-bold text-gray-900">
@@ -212,12 +249,12 @@ export default function App({ product, onBack }) {
                 icon={feature.icon}
                 title={feature.title}
                 description={feature.description}
+                onClick={() => showToast(`Technical Detail: ${feature.title}`)}
               />
             ))}
           </div>
         </section>
 
-        {/* Reviews Section */}
         <section className="mb-16">
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -227,7 +264,10 @@ export default function App({ product, onBack }) {
               <p className="text-gray-600">Verified feedback for this asset</p>
             </div>
             <button
-              onClick={() => setReviewFormOpen(true)}
+              onClick={() => {
+                setReviewFormOpen(true);
+                showToast("Opening review form...");
+              }}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold transition-all hover:bg-blue-700 active:scale-95 shadow-md"
             >
               <Plus className="h-5 w-5" />
@@ -241,61 +281,13 @@ export default function App({ product, onBack }) {
           </div>
         </section>
 
-        {/* Review Form Component */}
         <ReviewForm
           open={reviewFormOpen}
           onOpenChange={setReviewFormOpen}
           productName={product.name}
           productId={product._id}
         />
-
-        {/* FAQ Section */}
-        <section className="mb-16 hidden">
-          <div className="mb-8 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-gray-900">
-              Frequently Asked Questions
-            </h2>
-          </div>
-          <div className="mx-auto max-w-3xl space-y-4">
-            <details className="group rounded-lg border border-gray-200 bg-white p-6 transition-all hover:shadow-md">
-              <summary className="cursor-pointer list-none font-semibold text-lg text-gray-800">
-                <div className="flex items-center justify-between">
-                  <h3>What is included in the tech stack?</h3>
-                  <span className="text-gray-400 transition-transform group-open:rotate-180">
-                    ▼
-                  </span>
-                </div>
-              </summary>
-              <p className="mt-4 text-gray-600">
-                This asset is built using: {product.techStack?.join(", ")}. It
-                includes full source code and setup documentation.
-              </p>
-            </details>
-
-            <details className="group rounded-lg border border-gray-200 bg-white p-6 transition-all hover:shadow-md">
-              <summary className="cursor-pointer list-none font-semibold text-lg text-gray-800">
-                <div className="flex items-center justify-between">
-                  <h3>Is there a refund policy?</h3>
-                  <span className="text-gray-400 transition-transform group-open:rotate-180">
-                    ▼
-                  </span>
-                </div>
-              </summary>
-              <p className="mt-4 text-gray-600">
-                Yes! We offer a 30-day money-back guarantee if you're not
-                satisfied with the {product.category} asset.
-              </p>
-            </details>
-          </div>
-        </section>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white hidden">
-        <div className="mx-auto max-w-7xl px-6 py-12 text-center text-gray-600">
-          <p>© 2026 Switch2ITech. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }

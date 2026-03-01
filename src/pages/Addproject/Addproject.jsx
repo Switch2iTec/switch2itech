@@ -20,6 +20,7 @@ const Addproject = ({ onSuccess, initialData }) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [allUsers, setAllUsers] = useState([]);
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   const [project, setProject] = useState({
     title: "",
@@ -38,11 +39,15 @@ const Addproject = ({ onSuccess, initialData }) => {
   const [demoVideo, setDemoVideo] = useState(null);
   const [faqs, setFaqs] = useState([{ question: "", answer: "" }]);
 
-  // Team assignment (only for admin/manager)
   const canAssignTeam = role === "admin" || role === "manager";
   const [selectedManager, setSelectedManager] = useState("");
   const [selectedDevs, setSelectedDevs] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+  };
 
   useEffect(() => {
     if (canAssignTeam) {
@@ -78,7 +83,16 @@ const Addproject = ({ onSuccess, initialData }) => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setCoverImage(file);
-    if (file) setCoverPreview(URL.createObjectURL(file));
+    if (file) {
+      setCoverPreview(URL.createObjectURL(file));
+      showToast("Cover image updated");
+    }
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    setDemoVideo(file);
+    if (file) showToast("Demo video attached");
   };
 
   const handleFaqChange = (index, field, value) => {
@@ -86,22 +100,47 @@ const Addproject = ({ onSuccess, initialData }) => {
     updated[index][field] = value;
     setFaqs(updated);
   };
-  const addFaq = () => setFaqs([...faqs, { question: "", answer: "" }]);
-  const removeFaq = (i) => setFaqs(faqs.filter((_, idx) => idx !== i));
+
+  const addFaq = () => {
+    setFaqs([...faqs, { question: "", answer: "" }]);
+    showToast("Added new FAQ slot");
+  };
+
+  const removeFaq = (i) => {
+    setFaqs(faqs.filter((_, idx) => idx !== i));
+    showToast("FAQ slot removed");
+  };
 
   const addDev = (e) => {
-    if (e.target.value && !selectedDevs.includes(e.target.value))
+    if (e.target.value && !selectedDevs.includes(e.target.value)) {
       setSelectedDevs([...selectedDevs, e.target.value]);
+      const name = allUsers.find(u => u._id === e.target.value)?.name;
+      showToast(`Assigned ${name}`);
+    }
     e.target.value = "";
   };
-  const removeDev = (id) => setSelectedDevs(selectedDevs.filter(x => x !== id));
+  const removeDev = (id) => {
+    setSelectedDevs(selectedDevs.filter(x => x !== id));
+    showToast("Developer removed");
+  };
 
   const addClient = (e) => {
-    if (e.target.value && !selectedClients.includes(e.target.value))
+    if (e.target.value && !selectedClients.includes(e.target.value)) {
       setSelectedClients([...selectedClients, e.target.value]);
+      const name = allUsers.find(u => u._id === e.target.value)?.name;
+      showToast(`Linked client: ${name}`);
+    }
     e.target.value = "";
   };
-  const removeClient = (id) => setSelectedClients(selectedClients.filter(x => x !== id));
+  const removeClient = (id) => {
+    setSelectedClients(selectedClients.filter(x => x !== id));
+    showToast("Client unlinked");
+  };
+
+  const handleManagerChange = (e) => {
+    setSelectedManager(e.target.value);
+    showToast(e.target.value ? "Project Manager assigned" : "Manager unassigned");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,7 +149,6 @@ const Addproject = ({ onSuccess, initialData }) => {
 
     const formData = new FormData();
 
-    // Core fields
     Object.entries(project).forEach(([key, val]) => {
       if (key === "tags") {
         if (val) {
@@ -125,15 +163,12 @@ const Addproject = ({ onSuccess, initialData }) => {
       }
     });
 
-    // Files
     if (coverImage) formData.append("coverImage", coverImage);
     if (demoVideo) formData.append("demoVideo", demoVideo);
 
-    // FAQs
     const validFaqs = faqs.filter(f => f.question && f.answer);
     if (validFaqs.length > 0) formData.append("faqs", JSON.stringify(validFaqs));
 
-    // Team (if admin/manager)
     if (canAssignTeam) {
       if (selectedManager) formData.append("manager", selectedManager);
       selectedDevs.forEach(id => formData.append("teamMembers[]", id));
@@ -146,8 +181,10 @@ const Addproject = ({ onSuccess, initialData }) => {
         : await projectService.createProject(formData);
 
       if (response.data.status === "success" || response.data) {
-        setStatus({ type: "success", message: `Project ${initialData ? 'updated' : 'created'} successfully! 🎉` });
-        // Reset
+        const successMsg = `Project ${initialData ? 'updated' : 'created'} successfully! 🎉`;
+        setStatus({ type: "success", message: successMsg });
+        showToast(successMsg);
+        
         if (!initialData) {
           setProject({ title: "", description: "", status: "planning", priority: "medium", budget: "", currency: "USD", startDate: "", endDate: "", tags: "" });
           setCoverImage(null); setCoverPreview(null); setDemoVideo(null);
@@ -157,7 +194,9 @@ const Addproject = ({ onSuccess, initialData }) => {
         if (onSuccess) onSuccess();
       }
     } catch (err) {
-      setStatus({ type: "error", message: err.response?.data?.message || "Something went wrong!" });
+      const errorMsg = err.response?.data?.message || "Something went wrong!";
+      setStatus({ type: "error", message: errorMsg });
+      showToast("Submission failed: Check inputs");
     } finally {
       setLoading(false);
     }
@@ -168,7 +207,15 @@ const Addproject = ({ onSuccess, initialData }) => {
   const clients = allUsers.filter(u => u.role === "client");
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-background p-2 transition-colors duration-300">
+    <div className="w-full max-w-3xl mx-auto bg-background p-2 transition-colors duration-300 relative">
+      
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <CheckCircle2 size={18} className="text-primary" />
+          <span className="text-sm font-medium text-foreground">{toast.message}</span>
+        </div>
+      )}
+
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-foreground tracking-tight">{initialData ? 'Edit Project' : 'New Project'}</h2>
         <p className="text-muted-foreground text-sm mt-1">{initialData ? 'Update the selected project configuration logic.' : 'Fill in the details below to provision a new project in the ERP system.'}</p>
@@ -182,7 +229,6 @@ const Addproject = ({ onSuccess, initialData }) => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ── Core Info ────────────────────────────────────────────────── */}
         <fieldset className="space-y-5 p-6 rounded-2xl border border-border/60 bg-card/40">
           <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Core Information</legend>
 
@@ -255,7 +301,6 @@ const Addproject = ({ onSuccess, initialData }) => {
           </div>
         </fieldset>
 
-        {/* ── Media Upload ──────────────────────────────────────────────── */}
         <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
           <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Media Assets</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,20 +311,19 @@ const Addproject = ({ onSuccess, initialData }) => {
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-2 font-bold"><Video size={15} className="text-primary" /> Demo Video</Label>
-              <Input type="file" accept="video/*" onChange={e => setDemoVideo(e.target.files[0])} className="cursor-pointer rounded-xl" />
+              <Input type="file" accept="video/*" onChange={handleVideoChange} className="cursor-pointer rounded-xl" />
               {demoVideo && <p className="text-xs text-muted-foreground mt-1">📹 {demoVideo.name}</p>}
             </div>
           </div>
         </fieldset>
 
-        {/* ── Team Assignment (admin/manager only) ─────────────────────── */}
         {canAssignTeam && (
           <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
             <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-2">Team Assignment</legend>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2 font-bold"><Users size={15} className="text-primary" /> Project Manager</Label>
-              <select className={selectClass} value={selectedManager} onChange={e => setSelectedManager(e.target.value)}>
+              <select className={selectClass} value={selectedManager} onChange={handleManagerChange}>
                 <option value="">— Unassigned —</option>
                 {managers.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
               </select>
@@ -323,7 +367,6 @@ const Addproject = ({ onSuccess, initialData }) => {
           </fieldset>
         )}
 
-        {/* ── FAQs ─────────────────────────────────────────────────────── */}
         <fieldset className="space-y-4 p-6 rounded-2xl border border-border/60 bg-card/40">
           <div className="flex items-center justify-between">
             <legend className="text-sm font-bold uppercase tracking-widest text-muted-foreground">

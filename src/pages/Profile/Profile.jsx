@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import authService from "../../api/authService";
 import userService from "../../api/userService";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import {
   Mail, Phone, Building2, ShieldCheck, Camera,
   KeyRound, Eye, EyeOff, Loader2, CheckCircle,
@@ -39,13 +39,13 @@ const EditRow = ({ icon: Icon, label, name, value, onChange, placeholder, disabl
     <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground ml-1">
       <Icon size={12} className="text-primary" /> {label}
     </p>
-    <Input
+    <input
       name={name}
       value={value || ''}
       onChange={onChange}
       disabled={disabled}
       placeholder={placeholder}
-      className={`h-9 text-sm font-medium ${disabled ? 'bg-muted opacity-60 cursor-not-allowed' : 'bg-background focus-visible:ring-primary'}`}
+      className={`flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 ring-primary disabled:cursor-not-allowed disabled:opacity-50 font-medium ${disabled ? 'bg-muted opacity-60' : 'bg-background'}`}
     />
   </div>
 );
@@ -55,20 +55,18 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Edit Profile States
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({});
 
-  // Auth / Password States
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const response = await authService.getCurrentUser();
       if (response.data.status === "success") {
         setUser(response.data.data);
@@ -81,10 +79,9 @@ const Profile = () => {
         });
       }
     } catch (err) {
-      console.error("Profile fetch error:", err);
-      toast.error("Failed to load profile details.");
+      toast.error("Failed to sync profile data.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -97,16 +94,16 @@ const Profile = () => {
   };
 
   const handleProfileSubmit = async () => {
+    const toastId = toast.loading("Updating profile details...");
     try {
       setIsSaving(true);
       const payload = { ...editForm, skills: editForm.skills.split(',').map(s => s.trim()).filter(Boolean) };
       await userService.updateProfile(payload);
-      toast.success("Profile updated successfully!");
+      toast.success("Profile updated successfully!", { id: toastId });
       setIsEditing(false);
-      await fetchProfile(); // refresh data
+      await fetchProfile(true); 
     } catch (err) {
-      console.error("Failed to update profile", err);
-      toast.error(err.response?.data?.message || "Failed to update profile.");
+      toast.error(err.response?.data?.message || "Failed to update profile.", { id: toastId });
     } finally {
       setIsSaving(false);
     }
@@ -119,28 +116,29 @@ const Profile = () => {
     const formData = new FormData();
     formData.append('profile', file);
 
-    const uploadPromise = userService.updateProfile(formData).then(() => fetchProfile());
-
-    toast.promise(uploadPromise, {
-      loading: 'Uploading new profile picture...',
-      success: 'Avatar updated!',
-      error: 'Failed to upload avatar.'
-    });
+    toast.promise(
+      userService.updateProfile(formData).then(() => fetchProfile(true)),
+      {
+        loading: 'Uploading new profile picture...',
+        success: 'Avatar updated successfully!',
+        error: (err) => err.response?.data?.message || 'Failed to upload avatar.'
+      }
+    );
   };
 
   const handlePasswordSubmit = async () => {
     if (!passwordForm.newPassword) {
-      return toast.error("Please provide a new password.");
+      return toast.warning("Please provide a new password.");
     }
+    const toastId = toast.loading("Securing your account...");
     try {
       setIsUpdatingPassword(true);
       await userService.updateProfile({ password: passwordForm.newPassword });
-      toast.success("Password secured!");
+      toast.success("Password updated successfully!", { id: toastId });
       setIsPasswordDialogOpen(false);
       setPasswordForm({ currentPassword: '', newPassword: '' });
     } catch (err) {
-      console.error("Failed to update password", err);
-      toast.error(err.response?.data?.message || "Failed to update password.");
+      toast.error(err.response?.data?.message || "Failed to update password.", { id: toastId });
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -162,8 +160,6 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-8 animate-in fade-in duration-400 max-w-5xl mx-auto">
-
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
@@ -178,7 +174,15 @@ const Profile = () => {
           <Button
             variant="outline"
             className="gap-2 rounded-xl border-primary/20 hover:border-primary/50 text-foreground transition-all"
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              const nextState = !isEditing;
+              setIsEditing(nextState);
+              if (nextState) {
+                toast.info("Editing enabled");
+              } else {
+                toast("Changes discarded", { icon: "ℹ️" });
+              }
+            }}
           >
             {isEditing ? <X size={15} /> : <Edit3 size={15} />}
             {isEditing ? "Cancel Edit" : "Edit Details"}
@@ -224,15 +228,12 @@ const Profile = () => {
       </div>
 
       <div className="space-y-8">
-        {/* Hero banner */}
         <div className="rounded-3xl border border-border/50 bg-card/60 backdrop-blur-md overflow-hidden shadow-sm">
-          {/* Top gradient bar */}
           <div className="h-32 bg-gradient-to-br from-primary/80 via-blue-600 to-indigo-800 relative">
             <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJ3aGl0ZSIgZmlsbC1ydWxlPSJldmVub2RkIj48Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iMSIvPjwvZz48L3N2Zz4=')]" />
           </div>
 
           <div className="px-6 md:px-10 pb-8 flex flex-col md:flex-row gap-6 relative">
-            {/* Avatar overlapping banner */}
             <div className="relative -mt-16 flex-shrink-0 group">
               <Avatar className="h-28 w-28 md:h-32 md:w-32 border-4 border-card shadow-xl bg-card transition-transform group-hover:scale-105 duration-300">
                 <AvatarImage src={user.profile} alt={user.name} className="object-cover" />
@@ -260,7 +261,6 @@ const Profile = () => {
               <span className="absolute top-2 right-2 h-4 w-4 bg-emerald-500 border-2 border-card rounded-full shadow-sm" title="Online" />
             </div>
 
-            {/* Name + badges */}
             <div className="flex-1 mt-4 md:mt-0 pt-2 flex flex-col justify-end">
               {isEditing ? (
                 <div className="max-w-xs mb-3">
@@ -304,7 +304,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Info Grid */}
         <div className="rounded-3xl border border-border/50 bg-card/60 backdrop-blur-md p-6 md:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/40">
             <h3 className="text-base font-extrabold flex items-center gap-2 tracking-tight">
@@ -347,7 +346,6 @@ const Profile = () => {
             <InfoRow icon={Briefcase} label="Active Allocations" value={user.assignedProjects?.length > 0 ? `${user.assignedProjects.length} Managed Repositories` : 'No active projects linked.'} />
           </div>
         </div>
-
       </div>
     </div>
   );

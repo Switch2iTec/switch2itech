@@ -6,7 +6,7 @@ import testimonialService from "../../api/testimonialService";
 import {
   Monitor, Package, Users, Star,
   CircleDollarSign, ArrowUpRight, ArrowLeft, Loader2,
-  LayoutDashboard, Sparkles,
+  LayoutDashboard, Sparkles, CheckCircle2
 } from "lucide-react";
 import ProjectPage from "../Admindashboard/Projectspage";
 import Productpage from "../Admindashboard/Productpage";
@@ -76,6 +76,12 @@ const Top = ({ currentView, setCurrentView }) => {
   const [data, setData] = useState({ projects: 0, products: 0, users: 0, testimonials: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
+  const [toast, setToast] = useState({ show: false, message: '' });
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
@@ -100,14 +106,21 @@ const Top = ({ currentView, setCurrentView }) => {
           testimonials: testRes.data.data.length,
           revenue: totalRevenue,
         });
+        showToast("Metrics updated with latest data");
       } catch (err) {
         console.error("Dashboard Fetch Error:", err);
+        showToast("Error syncing dashboard data");
       } finally {
         setLoading(false);
       }
     };
     if (currentView === "overview") fetchDashboardData();
   }, [currentView]);
+
+  const handleViewChange = (viewId, title) => {
+    setCurrentView(viewId);
+    showToast(`Navigating to ${title}`);
+  };
 
   const getValue = (id) => {
     if (loading) return "···";
@@ -117,7 +130,7 @@ const Top = ({ currentView, setCurrentView }) => {
 
   const BackButton = () => (
     <button
-      onClick={() => setCurrentView("overview")}
+      onClick={() => handleViewChange("overview", "Dashboard Overview")}
       className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:opacity-80 transition-opacity mb-6 group"
     >
       <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
@@ -135,7 +148,13 @@ const Top = ({ currentView, setCurrentView }) => {
 
   if (currentView !== "overview") {
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-400">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-400 relative">
+        {toast.show && (
+          <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <CheckCircle2 size={18} className="text-primary" />
+            <span className="text-sm font-medium text-foreground">{toast.message}</span>
+          </div>
+        )}
         {renderView()}
       </div>
     );
@@ -145,13 +164,18 @@ const Top = ({ currentView, setCurrentView }) => {
   const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-400">
+    <div className="space-y-8 animate-in fade-in duration-400 relative">
+      
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <CheckCircle2 size={18} className="text-primary" />
+          <span className="text-sm font-medium text-foreground">{toast.message}</span>
+        </div>
+      )}
 
       {/* ── Hero Header ─────────────────────────────────────────────── */}
       <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
-        {/* Gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-violet-500/5 pointer-events-none" />
-        {/* Decorative orbs */}
         <div className="absolute -top-16 -right-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" />
 
@@ -184,15 +208,13 @@ const Top = ({ currentView, setCurrentView }) => {
         {STAT_CONFIG.map((stat) => (
           <button
             key={stat.id}
-            onClick={() => setCurrentView(stat.id)}
-            className={`metric-card text-left group cursor-pointer ring-1 ${stat.ring} hover:shadow-xl ${stat.glow}`}
+            onClick={() => handleViewChange(stat.id, stat.title)}
+            className={`metric-card text-left group cursor-pointer ring-1 ${stat.ring} hover:shadow-xl ${stat.glow} relative`}
           >
-            {/* Icon */}
             <div className={`inline-flex p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-md ${stat.glow} mb-4 group-hover:scale-110 transition-transform duration-300`}>
               <stat.icon className="w-5 h-5 text-white" />
             </div>
 
-            {/* Value */}
             <div className="space-y-0.5 mb-4">
               <h3 className="text-2xl font-black tracking-tight tabular-nums">
                 {loading ? (
@@ -202,7 +224,6 @@ const Top = ({ currentView, setCurrentView }) => {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.title}</p>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between">
               <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${stat.badge}`}>
                 {stat.label}
@@ -210,7 +231,6 @@ const Top = ({ currentView, setCurrentView }) => {
               <ArrowUpRight size={14} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
             </div>
 
-            {/* Bottom accent bar */}
             <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${stat.bar} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-xl`} />
           </button>
         ))}

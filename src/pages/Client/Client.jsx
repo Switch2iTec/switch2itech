@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import userService from "../../api/userService"
 import {
   Users, UserCheck, UserPlus, Search,
-  Trash2, Edit, Shield, Mail, CheckCircle2, XCircle, Download, Check
+  Trash2, Edit, Shield, Mail, CheckCircle2, XCircle, Download, Check, X
 } from "lucide-react"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -23,22 +23,29 @@ const Userspage = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
+
   const fetchUsers = async () => {
     try {
       setLoading(true)
       const res = await userService.getUsers()
       setUsers(res.data?.data || [])
+      if (res.data?.data) showToast("User directory synchronized")
     } catch (err) {
       console.error("Failed to fetch users:", err)
       setUsers([])
+      showToast("Identity sync failed", "error")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => { fetchUsers() }, [])
-
-
 
   const stats = [
     { label: "Total Accounts", value: users.length, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -52,10 +59,24 @@ const Userspage = () => {
     (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  return (
-    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400">
+  const ToastUI = () => (
+    toast.show && (
+      <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 border rounded-xl shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300 ${
+        toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-card border-border text-foreground'
+      }`}>
+        {toast.type === 'error' ? <XCircle size={18} className="text-rose-500" /> : <CheckCircle2 size={18} className="text-violet-500" />}
+        <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+        <button onClick={() => setToast({ ...toast, show: false })} className="ml-2 opacity-50 hover:opacity-100">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  )
 
-      {/* Hero Header */}
+  return (
+    <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 animate-in fade-in duration-400 relative">
+      <ToastUI />
+
       <div className="relative rounded-2xl overflow-hidden border border-border/40 bg-card">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-primary/5 pointer-events-none" />
         <div className="absolute -top-16 -left-16 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -75,7 +96,6 @@ const Userspage = () => {
         </div>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
           <div key={i} className="metric-card ring-1 ring-border/50 bg-card/40">
@@ -88,7 +108,6 @@ const Userspage = () => {
         ))}
       </div>
 
-      {/* User Table */}
       <div className="dashboard-glass rounded-2xl overflow-hidden border-border/50">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-6 py-5 border-b border-border/40 bg-card/30">
           <div>
@@ -101,7 +120,10 @@ const Userspage = () => {
               placeholder="Search by name or email…"
               className="pl-9 h-10 rounded-xl text-sm bg-background border-border/50 focus-visible:ring-primary shadow-sm"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => {
+                setSearchTerm(e.target.value)
+                if (e.target.value === "") showToast("Search cleared")
+              }}
             />
           </div>
         </div>
@@ -134,7 +156,7 @@ const Userspage = () => {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground font-bold italic">
+                  <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground font-bold italic">
                     No users matched your search criteria.
                   </td>
                 </tr>
@@ -157,7 +179,10 @@ const Userspage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge className={`border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md ${ROLE_BADGE[user.role] || ROLE_BADGE.user}`}>
+                      <Badge 
+                        onClick={() => showToast(`Role: ${user.role || 'user'}`)}
+                        className={`border cursor-help px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md ${ROLE_BADGE[user.role] || ROLE_BADGE.user}`}
+                      >
                         {user.role || 'user'}
                       </Badge>
                     </td>
