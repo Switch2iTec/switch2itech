@@ -156,13 +156,13 @@ const Projects = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 lg:p-10 space-y-8 max-w-[1600px] mx-auto transition-colors duration-300">
+    <div className="min-h-screen bg-background p-8 space-y-8 animate-in fade-in duration-400">
 
       {/* 1. Header & KPI Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Project Overview</h1>
-          <p className="text-muted-foreground">Synchronized delivery metrics and client success assets.</p>
+      <div className="page-header pb-6 border-b">
+        <div>
+          <h1 className="page-title">Project Overview</h1>
+          <p className="page-subtitle">Synchronized delivery metrics and client success assets</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -357,9 +357,9 @@ const Projects = () => {
           <div className="grid gap-6 py-4">
             {/* Manager Dropdown */}
             <div className="grid gap-2">
-              <Label className="font-bold">Project Manager</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Manager</Label>
               <select
-                className="w-full h-10 px-3 rounded-md border text-sm"
+                className="auth-input"
                 value={assignments.manager}
                 onChange={(e) => setAssignments({ ...assignments, manager: e.target.value })}
               >
@@ -422,7 +422,7 @@ const Projects = () => {
                   const cl = users.find(u => u._id === clientId);
                   if (!cl) return null;
                   return (
-                    <Badge key={clientId} variant="secondary" className="cursor-pointer bg-blue-100 text-blue-800" onClick={() => {
+                    <Badge key={clientId} variant="secondary" className="cursor-pointer bg-primary/10 text-primary border border-primary/20" onClick={() => {
                       setAssignments({ ...assignments, clients: assignments.clients.filter(id => id !== clientId) });
                     }}>
                       {cl.name} ×

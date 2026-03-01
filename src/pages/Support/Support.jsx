@@ -1,123 +1,151 @@
 import React from 'react'
-import { 
-  Search, 
-  HelpCircle, 
-  MessageSquare, 
-  LifeBuoy, 
-  ChevronRight, 
-  Activity,
-  ArrowUpRight
+import {
+  Search, HelpCircle, MessageSquare, LifeBuoy,
+  ArrowUpRight, CheckCircle2, AlertCircle, Activity
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
 import { dummyData } from '../../utility/dumydata'
 
+const CHANNELS = [
+  {
+    icon: HelpCircle,
+    title: 'Knowledge Base',
+    desc: 'Read tutorials and guides for all products.',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+    accent: 'bg-blue-500',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Community Forum',
+    desc: 'Join discussions with other developers.',
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-500/10',
+    border: 'border-indigo-500/20',
+    accent: 'bg-indigo-500',
+  },
+  {
+    icon: LifeBuoy,
+    title: 'Direct Support',
+    desc: 'Open a ticket with our expert team.',
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
+    accent: 'bg-emerald-500',
+  },
+]
+
 const Support = () => {
   return (
-    <div className="p-8 space-y-10 overflow-y-auto max-h-[calc(100vh-80px)] no-scrollbar bg-background">
-      
-      <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-4">
-        <h1 className="text-3xl font-black tracking-tight text-foreground">Support Center</h1>
+    <div className="min-h-screen bg-background p-8 space-y-10 animate-in fade-in duration-400">
+
+      {/* Hero search header */}
+      <div className="flex flex-col items-center text-center max-w-2xl mx-auto space-y-5 py-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold text-primary uppercase tracking-wider">
+          <LifeBuoy size={12} /> Support Center
+        </div>
+        <h1 className="text-4xl font-black tracking-tight">How can we help?</h1>
         <p className="text-muted-foreground text-sm">
-          Search our resources or review latest platform feedback from {dummyData.testimonials.length} users.
+          Search our knowledge base or get in touch with our expert support team.
         </p>
-        <div className="relative w-full max-w-md mt-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <Input 
-            placeholder="Search documentation..." 
-            className="pl-12 h-12 rounded-2xl border-border bg-card shadow-sm focus-visible:ring-primary/20"
+        <div className="relative w-full max-w-lg">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <Input
+            placeholder="Search documentation, guides, FAQs..."
+            className="pl-11 h-12 rounded-2xl border-border bg-card shadow-sm focus-visible:ring-primary/20 text-sm"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-[2rem] border-border bg-card hover:shadow-lg transition-all border-b-4 border-b-blue-500">
-          <CardContent className="p-6 flex flex-col items-center text-center">
-            <div className="p-4 bg-blue-500/10 rounded-2xl mb-4 text-blue-500">
-              <HelpCircle size={28} />
+      {/* Support channels */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {CHANNELS.map((ch) => (
+          <button
+            key={ch.title}
+            className={`stat-card flex flex-col items-center text-center gap-4 group cursor-pointer relative overflow-hidden`}
+          >
+            <div className={`absolute top-0 left-0 right-0 h-0.5 ${ch.accent} opacity-40 group-hover:opacity-100 transition-opacity`} />
+            <div className={`p-4 ${ch.bg} border ${ch.border} rounded-2xl group-hover:scale-105 transition-transform`}>
+              <ch.icon size={26} className={ch.color} />
             </div>
-            <h3 className="font-bold">Knowledge Base</h3>
-            <p className="text-xs text-muted-foreground mt-2">Read tutorials and guides for all products.</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[2rem] border-border bg-card hover:shadow-lg transition-all border-b-4 border-b-indigo-500">
-          <CardContent className="p-6 flex flex-col items-center text-center">
-            <div className="p-4 bg-indigo-500/10 rounded-2xl mb-4 text-indigo-500">
-              <MessageSquare size={28} />
+            <div>
+              <h3 className="font-extrabold text-sm">{ch.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1.5">{ch.desc}</p>
             </div>
-            <h3 className="font-bold">Community Forum</h3>
-            <p className="text-xs text-muted-foreground mt-2">Join discussions with other developers.</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[2rem] border-border bg-card hover:shadow-lg transition-all border-b-4 border-b-emerald-500">
-          <CardContent className="p-6 flex flex-col items-center text-center">
-            <div className="p-4 bg-emerald-500/10 rounded-2xl mb-4 text-emerald-500">
-              <LifeBuoy size={28} />
+            <div className={`text-xs font-bold ${ch.color} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+              Learn more <ArrowUpRight size={12} />
             </div>
-            <h3 className="font-bold">Direct Support</h3>
-            <p className="text-xs text-muted-foreground mt-2">Open a ticket with our expert team.</p>
-          </CardContent>
-        </Card>
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        <Card className="rounded-[2.5rem] border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between">
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Recent Feedback */}
+        <Card className="rounded-2xl border-border/50 bg-card">
+          <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4">
             <div>
-              <CardTitle className="text-lg">Recent User Feedback</CardTitle>
-              <CardDescription>Latest {dummyData.testimonials.slice(0, 5).length} public reviews</CardDescription>
+              <CardTitle className="text-base font-extrabold">Recent User Feedback</CardTitle>
+              <CardDescription className="text-xs">Latest public reviews from users</CardDescription>
             </div>
-            <Activity className="text-muted-foreground opacity-50" />
+            <Activity size={16} className="text-muted-foreground/40" />
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-6 pb-6 space-y-3">
             {dummyData.testimonials.slice(0, 5).map((item) => (
-              <div key={item.id} className="flex items-start gap-4 p-4 rounded-2xl bg-muted/30 border border-border/50">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                  {item.author.substring(0, 2)}
+              <div key={item.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-secondary/30 border border-border/40">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                  {item.author.substring(0, 2).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-bold">{item.author}</span>
-                    <span className="text-[10px] text-muted-foreground">{item.date}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold truncate">{item.author}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{item.date}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground italic line-clamp-1">"{item.text}"</p>
+                  <p className="text-xs text-muted-foreground italic line-clamp-1 mt-0.5">"{item.text}"</p>
                 </div>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2.5rem] border-border bg-card overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-lg">Platform Status</CardTitle>
-            <CardDescription>Live health metrics from your analytics</CardDescription>
+        {/* Platform Status */}
+        <Card className="rounded-2xl border-border/50 bg-card">
+          <CardHeader className="px-6 pt-6 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-extrabold">Platform Status</CardTitle>
+                <CardDescription className="text-xs">Live health metrics</CardDescription>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">All Systems Go</span>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-6 pb-6 space-y-1">
             {dummyData.analytics.slice(0, 5).map((stat) => (
-              <div key={stat.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-muted/50 transition-colors">
+              <div key={stat.id} className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-secondary/40 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className={`h-2 w-2 rounded-full ${stat.trend === 'up' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+                  <div className={`h-1.5 w-1.5 rounded-full ${stat.trend === 'up' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
                   <span className="text-sm font-medium">{stat.label}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold">{stat.value}</span>
-                  <ArrowUpRight size={14} className={stat.trend === 'up' ? 'text-emerald-500' : 'text-amber-500'} />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold">{stat.value}</span>
+                  <ArrowUpRight size={13} className={stat.trend === 'up' ? 'text-emerald-500' : 'text-amber-500'} />
                 </div>
               </div>
             ))}
             <div className="pt-4">
-              <Button className="w-full rounded-2xl py-6 font-bold flex gap-2">
-                <LifeBuoy size={18} />
-                Contact Support Team
+              <Button className="w-full rounded-xl gap-2 font-bold">
+                <LifeBuoy size={16} /> Contact Support Team
               </Button>
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   )

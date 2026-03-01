@@ -104,7 +104,7 @@ const Main = () => {
             <h3 className="text-lg font-bold text-foreground mb-1 leading-tight">
               {client.name}
             </h3>
-            <p className="text-xs font-medium text-indigo-500 mb-4">
+            <p className="text-xs font-bold text-primary mb-4">
               {client.company || "Independent Client"}
             </p>
 
@@ -140,8 +140,8 @@ const Main = () => {
                   {client.assignedProjects?.length || 0} Projects
                 </Badge>
                 <Badge
-                  variant="outline"
-                  className="px-2 py-0.5 rounded-full text-[10px] font-bold border-indigo-500/50 text-indigo-500 bg-indigo-500/5"
+                  variant="default"
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase"
                 >
                   {client.role.toUpperCase()}
                 </Badge>

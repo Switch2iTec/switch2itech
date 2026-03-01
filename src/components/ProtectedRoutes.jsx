@@ -1,21 +1,21 @@
-import React from "react";
-import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../context/ContextProvider";
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/ContextProvider';
+import { Loader2 } from 'lucide-react';
 
 const ProtectedRoutes = () => {
   const { authenticated, loading } = useAuth();
 
-  // 1. Jab tak backend se user verify ho raha ho, tab tak redirect nahi karna
+  // While session is being verified, show a spinner — never redirect prematurely
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="text-sm text-muted-foreground font-medium">Verifying session…</p>
       </div>
     );
   }
 
-  // 2. Check agar user authenticated hai toh page dikhayein (Outlet),
-  // varna login page par redirect kar dein.
   return authenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 

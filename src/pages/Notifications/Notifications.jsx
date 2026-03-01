@@ -1,45 +1,58 @@
 import React from 'react'
-import { Bell, Plus } from 'lucide-react'
+import { Bell, Plus, Megaphone, Info } from 'lucide-react'
+import { Button } from '../../components/ui/button'
 
 const Notifications = () => {
   return (
-    <div className="flex flex-col h-full overflow-hidden space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+    <div className="min-h-screen bg-background p-8 animate-in fade-in duration-400">
+      {/* Header */}
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
-            Announcements
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage system notifications and alerts.
-          </p>
+          <h1 className="page-title">Announcements</h1>
+          <p className="page-subtitle">Manage system notifications and alerts.</p>
         </div>
-
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-sm font-semibold text-white hover:bg-indigo-700 transition-all cursor-pointer shadow-lg shadow-indigo-100 active:scale-95 w-fit">
-          <Plus size={18} />
-          New announcement
-        </button>
+        <Button className="gap-2 rounded-xl shadow-sm shadow-primary/20">
+          <Plus size={15} /> New Announcement
+        </Button>
       </div>
 
-      <div className="border-t border-slate-200 w-full shrink-0"></div>
+      {/* Divider */}
+      <div className="border-t border-border mb-10" />
 
-      <div className="flex-1 flex items-center justify-center min-h-0 px-6">
-        <div className="max-w-md w-full border-2 border-dashed border-slate-200 rounded-3xl p-12 flex flex-col items-center text-center bg-slate-50/50">
-          <div className="bg-white p-4 rounded-2xl shadow-sm mb-6">
-            <Bell size={32} className="text-slate-300" />
+      {/* Empty state */}
+      <div className="flex items-center justify-center min-h-[55vh]">
+        <div className="max-w-sm w-full flex flex-col items-center text-center gap-5">
+          {/* Icon bubble */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Bell size={36} className="text-primary" />
+            </div>
+            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+              <span className="text-[9px] font-black text-primary-foreground">0</span>
+            </div>
           </div>
-          
-          <h3 className="text-lg font-bold text-slate-800">
-            No announcements
-          </h3>
-          
-          <p className="text-sm text-slate-500 mt-2">
-            Create your first system notification below.
-          </p>
 
-          <button className="mt-6 text-indigo-600 font-bold text-sm hover:text-indigo-700 cursor-pointer flex items-center gap-1 group">
-            <Plus size={16} className="group-hover:scale-110 transition-transform" />
-            Click here to start
-          </button>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-extrabold tracking-tight">No announcements yet</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Create your first system notification to keep your team informed.
+            </p>
+          </div>
+
+          {/* Info strip */}
+          <div className="w-full p-4 rounded-2xl bg-secondary/50 border border-border/50 flex items-start gap-3 text-left">
+            <Info size={15} className="text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              Announcements are visible to all users in their notification feed. Use them for important updates and alerts.
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            className="gap-2 rounded-xl border-dashed border-2 w-full hover:border-primary/50 hover:text-primary transition-colors"
+          >
+            <Megaphone size={15} /> Create First Announcement
+          </Button>
         </div>
       </div>
     </div>

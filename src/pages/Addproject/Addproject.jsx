@@ -286,7 +286,7 @@ const Addproject = ({ onSuccess }) => {
                 {selectedClients.map(id => {
                   const cl = clients.find(u => u._id === id);
                   return cl ? (
-                    <Badge key={id} className="bg-blue-100 text-blue-800 cursor-pointer gap-1" onClick={() => removeClient(id)}>
+                    <Badge key={id} variant="secondary" className="bg-primary/10 text-primary border border-primary/20 cursor-pointer gap-1" onClick={() => removeClient(id)}>
                       {cl.name} <X size={10} />
                     </Badge>
                   ) : null;

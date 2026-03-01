@@ -1,21 +1,23 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/ContextProvider';
+import { Loader2 } from 'lucide-react';
 
 const RequestAuth = () => {
   const { authenticated, loading } = useAuth();
 
-  // If we are still checking the session, show a generic loading state or nothing
+  // While session is being verified, show a spinner — prevents flickering on /login
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-black">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="text-sm text-muted-foreground font-medium">Loading…</p>
       </div>
     );
   }
 
-  // If authenticated, redirect away from login/signup to dashboard
-  return authenticated ? <Navigate to="/" replace /> : <Outlet />;
-}
+  // If already authenticated, redirect to dashboard — otherwise show the auth page
+  return authenticated ? <Navigate to="/profile" replace /> : <Outlet />;
+};
 
 export default RequestAuth;
