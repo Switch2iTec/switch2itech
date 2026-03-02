@@ -41,7 +41,6 @@ http://localhost:5173
 - `VITE_API_URL` is a Vite variable, so it is injected at **build time**.
 - For local development, keep it in `.env`.
 - For Docker/production builds, pass it as a Docker build argument.
-- `API_PROXY_URL` is a runtime Nginx variable used to proxy `/api/*` requests.
 
 ## Run with Docker (Production)
 
@@ -61,9 +60,7 @@ If you do not pass this argument, default is `/api`.
 ### 2) Run container
 
 ```bash
-docker run -d -p 8080:80 \
-  -e API_PROXY_URL=https://your-api-domain.com \
-  --name switch2itech-frontend switch2itech-frontend
+docker run -d -p 8080:80 --name switch2itech-frontend switch2itech-frontend
 ```
 
 ### 3) Open app
@@ -105,8 +102,6 @@ docker rm -f switch2itech-frontend
 - If Docker build fails with `Cannot find module @rollup/rollup-linux-*`, make sure latest `Dockerfile` is deployed and rebuild with `--no-cache`.
 - If production still uses old API URL, force a fresh image build (no cache) because Vite env is embedded at build time.
 - If refreshing a frontend route shows Nginx 404, redeploy latest image (it includes SPA fallback via `nginx.conf`).
-- If login returns `405 Method Not Allowed` on `/api/*`, set `API_PROXY_URL` in deployment runtime env to your backend domain (without `/api` suffix).
-- If you get `502 Bad Gateway`, verify `API_PROXY_URL` is reachable from the frontend container and is not the same frontend domain.
 - If Docker build looks stale, rebuild without cache:
 
 ```bash
