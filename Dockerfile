@@ -1,11 +1,11 @@
-FROM node:20-alpine AS deps
+FROM node:20-slim AS deps
 WORKDIR /app
 
 # Install dependencies using lockfile for reproducible builds
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=optional
 
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
