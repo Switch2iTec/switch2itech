@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import testimonialService from "../../api/testimonialService";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -13,12 +13,7 @@ const Top = ({ onFilterChange }) => {
   useEffect(() => {
     const fetchTestimonials = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5000/api/testimonials",
-          {
-            withCredentials: true,
-          }
-        );
+        const response = await testimonialService.getTestimonials();
         const data = response.data.data || response.data;
         setTestimonials(Array.isArray(data) ? data : []);
       } catch (err) {
