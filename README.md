@@ -1,16 +1,98 @@
-# React + Vite
+# Switch2iTech - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite based frontend for the Switch2iTech website.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js `20+`
+- npm `9+` (comes with recent Node.js)
+- Docker Desktop (optional, for container run)
 
-## React Compiler
+## Quick Start (Local)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Install dependencies:
 
-## Expanding the ESLint configuration
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. Start development server:
+
+```bash
+npm run host
+```
+
+3. Open in browser:
+
+```text
+http://localhost:5173
+```
+
+## Available Scripts
+
+- `npm run dev` - start Vite on default host
+- `npm run host` - start Vite on `0.0.0.0` (LAN accessible)
+- `npm run build` - create production build in `dist/`
+- `npm run preview` - preview production build locally
+- `npm run lint` - run ESLint checks
+
+## Run with Docker (Production)
+
+The project includes:
+
+- `Dockerfile` (multi-stage build)
+- `.dockerignore` (optimized build context)
+
+### 1) Build Docker image
+
+```bash
+docker build -t switch2itech-frontend .
+```
+
+### 2) Run container
+
+```bash
+docker run -d -p 8080:80 --name switch2itech-frontend switch2itech-frontend
+```
+
+### 3) Open app
+
+```text
+http://localhost:8080
+```
+
+### Useful Docker Commands
+
+Stop container:
+
+```bash
+docker stop switch2itech-frontend
+```
+
+Start again:
+
+```bash
+docker start switch2itech-frontend
+```
+
+View logs:
+
+```bash
+docker logs -f switch2itech-frontend
+```
+
+Remove container:
+
+```bash
+docker rm -f switch2itech-frontend
+```
+
+## Troubleshooting
+
+- If `npm install` fails, confirm Node version with `node -v` (must be `20+`).
+- If port `5173` or `8080` is busy, change host port in run command (example `-p 3000:80`).
+- If Docker build looks stale, rebuild without cache:
+
+```bash
+docker build --no-cache -t switch2itech-frontend .
+```
